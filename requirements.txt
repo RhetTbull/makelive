@@ -1,3 +1,4 @@
+click>=8.0
 pyobjc-core>=9.2
 pyobjc-framework-AVFoundation>=9.2
 pyobjc-framework-Contacts>=9.2
@@ -6,4 +7,3 @@ pyobjc-framework-Quartz>=9.2
 pyobjc-framework-UniformTypeIdentifiers>=9.2
 wheel>=0.41.2
 wurlitzer>=3.0.3
-click>=8.0
