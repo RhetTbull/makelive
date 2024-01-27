@@ -60,6 +60,8 @@ def find_matching_files_in_dir(directory):
 )
 @click.option(
     "--manual",
+    "-m",
+    metavar="IMAGE VIDEO",
     nargs=2,
     multiple=True,
     type=click.Path(exists=True, path_type=pathlib.Path),
