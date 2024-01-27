@@ -23,6 +23,8 @@ Linting and formatting utilizes [ruff](https://github.com/astral-sh/ruff)
 
 Testing uses pytest.
 
+Tests require that [exiftool](https://exiftool.org) is installed and available on the path.
+
 - `mypy .`
 - `python3 -m pytest`
 

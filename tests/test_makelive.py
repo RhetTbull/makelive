@@ -23,8 +23,6 @@ def get_exiftool_path():
     return shutil.which("exiftool")
 
 
-
-
 def get_metadata_with_exiftool(file_path: str) -> dict:
     process = subprocess.Popen(
         ["exiftool", "-j", "-G", file_path],
@@ -37,6 +35,7 @@ def get_metadata_with_exiftool(file_path: str) -> dict:
     metadata = json.loads(stdout)[0]
     return metadata
 
+
 def copy_test_images(filepath: str | os.PathLike):
     """Copy test images to a new location"""
     filepath = pathlib.Path(filepath)
@@ -45,18 +44,27 @@ def copy_test_images(filepath: str | os.PathLike):
     shutil.copyfile(TEST_VIDEO_MP4, filepath / TEST_VIDEO_MP4.name)
     shutil.copyfile(TEST_VIDEO_MOV, filepath / TEST_VIDEO_MOV.name)
 
-# @pytest.mark.parametrize("video", [TEST_VIDEO_MP4, TEST_VIDEO_MOV])
 
 def clean_metadata_dict(metadata: dict[str, Any]) -> dict[str, Any]:
     """Clean out metadata that we don't care about because it changes between runs"""
     metadata = metadata.copy()
-    for key in ["File:FileModifyDate", "File:FileAccessDate", "File:FileInodeChangeDate", "File:CurrentIPTCDigest"]:
+    for key in [
+        "File:FileModifyDate",
+        "File:FileAccessDate",
+        "File:FileInodeChangeDate",
+        "File:CurrentIPTCDigest",
+    ]:
         if key in metadata:
             del metadata[key]
-    for key in ["Photoshop:IPTCDigest","XMP:XMPToolkit", "MakerNotes:ContentIdentifier" ]:
+    for key in [
+        "Photoshop:IPTCDigest",
+        "XMP:XMPToolkit",
+        "MakerNotes:ContentIdentifier",
+    ]:
         if key in metadata:
             del metadata[key]
     return metadata
+
 
 @pytest.mark.skipif(get_exiftool_path() is None, reason="exiftool not found")
 def test_make_live_photo_image(tmp_path):
@@ -71,3 +79,18 @@ def test_make_live_photo_image(tmp_path):
     assert asset_id == metadata_after["MakerNotes:ContentIdentifier"]
     for key in ["EXIF:ImageDescription", "XMP:Subject", "IPTC:Keywords"]:
         assert metadata_before.get(key, None) == metadata_after.get(key, None)
+
+
+@pytest.mark.parametrize("video", [TEST_VIDEO_MP4, TEST_VIDEO_MOV])
+@pytest.mark.skipif(get_exiftool_path() is None, reason="exiftool not found")
+def test_make_live_photo_video(video, tmp_path):
+    """Test make_live_photo with a video"""
+
+    copy_test_images(tmp_path)
+    test_image = tmp_path / TEST_IMAGE.name
+    test_video = tmp_path / video.name
+    asset_id = make_live_photo(test_image, test_video)
+    metadata_after = get_metadata_with_exiftool(test_video)
+    assert asset_id == metadata_after["QuickTime:ContentIdentifier"]
+
+    # Note: do not test the other metadata because it is not currently preserved
