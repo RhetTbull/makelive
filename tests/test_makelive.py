@@ -7,6 +7,8 @@ import os
 import pathlib
 import shutil
 import subprocess
+import uuid
+from functools import cache
 from typing import Any
 
 import pytest
@@ -18,6 +20,7 @@ TEST_VIDEO_MP4: pathlib.Path = pathlib.Path("tests/test.mp4")
 TEST_VIDEO_MOV: pathlib.Path = pathlib.Path("tests/test.mov")
 
 
+@cache
 def get_exiftool_path():
     """Return the path to exiftool"""
     return shutil.which("exiftool")
@@ -94,3 +97,19 @@ def test_make_live_photo_video(video, tmp_path):
     assert asset_id == metadata_after["QuickTime:ContentIdentifier"]
 
     # Note: do not test the other metadata because it is not currently preserved
+
+
+@pytest.mark.skipif(get_exiftool_path() is None, reason="exiftool not found")
+def test_make_live_photo_asset_id(tmp_path):
+    """Test the make_live_photo() function with a user-provided asset ID"""
+
+    copy_test_images(tmp_path)
+    test_image = tmp_path / TEST_IMAGE.name
+    test_video = tmp_path / TEST_VIDEO_MOV.name
+    user_asset_id = str(uuid.uuid4()).upper()
+    asset_id = make_live_photo(test_image, test_video, asset_id=user_asset_id)
+    metadata_after = get_metadata_with_exiftool(test_image)
+    assert asset_id == user_asset_id
+    assert asset_id == metadata_after["MakerNotes:ContentIdentifier"]
+    metadata_after = get_metadata_with_exiftool(test_video)
+    assert asset_id == metadata_after["QuickTime:ContentIdentifier"]

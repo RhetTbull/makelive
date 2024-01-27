@@ -7,7 +7,7 @@ This is a simple command line tool that will apply the necessary metadata to a p
 ## Usage
 
 ```bash
-makelive photo.jpg video.mov
+makelive image_1234.jpg image_1234.mov
 ```
 
 ## Requirements
