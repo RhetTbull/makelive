@@ -17,6 +17,12 @@ makelive photo.jpg video.mov
 
 ## Installation
 
+* `python3 -m pip install makelive`
+
+To install from source:
+
+* `git clone git@github.com:RhetTbull/makelive.git`
+* `cd makelive`
 * `pip install flit`
 * `flit install`
 
