@@ -4,9 +4,9 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "makelive"
-authors = [{name = "Rhet Turnbull", email = "rturnbull+git@gmail.com"}]
+authors = [{ name = "Rhet Turnbull", email = "rturnbull+git@gmail.com" }]
 readme = "README.md"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 classifiers = ["License :: OSI Approved :: MIT License"]
 dynamic = ["version", "description"]
 requires-python = ">3.9"
@@ -21,7 +21,25 @@ dependencies = [
     "wurlitzer>=3.0.3",
 ]
 
+[project.optional-dependencies]
+test = ["pytest>=7.4.2", "pytest-cov", "mypy>=1.6.1"]
+# docs = [
+#     "mkdocs>=1.4.2",
+#     "mkdocs-material>=9.0.13",
+#     "mkdocstrings-python>=0.8.3",
+# ]
+
 [project.urls]
 Home = "https://github.com/RhetTbull/makelive"
 Issues = "https://github.com/RhetTbull/makelive/issues"
 Source = "https://github.com/RhetTbull/makelive"
+
+
+[project.scripts]
+makelive = "makelive:main"
+
+[tool.flit.sdist]
+exclude = ["site/**/*", "tests/**/*"]
+
+[tool.mypy]
+ignore_missing_imports = true

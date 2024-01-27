@@ -115,7 +115,7 @@ def avmetadata_for_asset_id(asset_id: str) -> AVFoundation.AVMetadataItem:
     return item
 
 
-def add_asset_id_to_quicktime_file(filepath: str, asset_id: str) -> str | None:
+def add_asset_id_to_quicktime_file(filepath: str | os.PathLike, asset_id: str) -> str | None:
     """Write the asset id to a QuickTime movie file at filepath and save to destination path
 
     Args:
@@ -124,7 +124,7 @@ def add_asset_id_to_quicktime_file(filepath: str, asset_id: str) -> str | None:
 
     Returns: Error message if there was an error, otherwise None.
     """
-
+    filepath = str(filepath)
     with objc.autorelease_pool():
         # rename file so export can write to original path
         temp_filepath = f".{asset_id}_{filepath}"
@@ -147,7 +147,7 @@ def add_asset_id_to_quicktime_file(filepath: str, asset_id: str) -> str | None:
         # return immediately. To wait for the export to complete, use a threading.Event
         # to block until the completion handler is called.
         event = threading.Event()
-        error = False
+        error = None 
 
         def _completion_handler():
             nonlocal error
