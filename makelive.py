@@ -25,6 +25,7 @@ kFigAppleMakerNote_AssetIdentifier = "17"
 kKeyContentIdentifier = "com.apple.quicktime.content.identifier"
 kKeySpaceQuickTimeMetadata = "mdta"
 
+
 def image_source_from_path(
     image_path: str | os.PathLike,
 ) -> Quartz.CGImageSourceRef:
@@ -174,6 +175,7 @@ def main(image: pathlib.Path, video: pathlib.Path):
     asset_id = str(uuid.uuid4()).upper()
     add_asset_id_to_image_file(image, asset_id)
     add_asset_id_to_quicktime_file(video, asset_id)
+
 
 if __name__ == "__main__":
     main()
