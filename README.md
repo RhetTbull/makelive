@@ -12,9 +12,13 @@ python makelive.py photo.jpg video.mov
 
 ## Requirements
 
-* macOS (Tested on 13.5.1)
+* macOS (Tested on 13.5.1; should work on 10.15+)
 * Python 3.9+
-* `pip install -r requirements.txt`
+
+## Installation
+
+* `pip install flit`
+* `flit install`
 
 ## How it works
 
@@ -25,6 +29,10 @@ This tool uses the Core Graphics and AV Foundation frameworks to modify the meta
 ## Caution
 
 This tool has not yet been extensively tested. It is recommended that you make a backup of your photo and video files before using this tool as it will overwrite the files.
+
+## Source Code
+
+The source code is available [here](https://github.com/RhetTbull/makelive).
 
 ## License
 

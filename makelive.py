@@ -20,8 +20,14 @@ from Foundation import (
 )
 from wurlitzer import pipes
 
+__version__ = "0.1.0"
+
 # Constants
+# key for the MakerApple dictionary in the image metadata to store the asset ID
+# exiftool reports this as MakerNote:ContentIdentifier
 kFigAppleMakerNote_AssetIdentifier = "17"
+
+# key and key space for the asset ID in the QuickTime movie metadata
 kKeyContentIdentifier = "com.apple.quicktime.content.identifier"
 kKeySpaceQuickTimeMetadata = "mdta"
 
