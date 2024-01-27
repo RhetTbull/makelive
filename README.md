@@ -4,6 +4,8 @@ Convert an photo + video pair into a Live Photo.
 
 This is a simple command line tool that will apply the necessary metadata to a photo + video pair so that when they are imported into the Apple Photos, they will be treated as a Live Photo.
 
+This is useful for converting images taken an Android phone into Live Photos that can be imported into Apple Photos.
+
 ## Usage
 
 ```bash
