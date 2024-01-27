@@ -39,7 +39,7 @@ Source = "https://github.com/RhetTbull/makelive"
 
 
 [project.scripts]
-makelive = "makelive:main"
+makelive = "makelive.__main__:main"
 
 [tool.flit.sdist]
 exclude = ["site/**/*", "tests/**/*"]
