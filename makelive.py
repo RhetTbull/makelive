@@ -6,6 +6,7 @@ import os
 import pathlib
 import threading
 import uuid
+
 import AVFoundation
 import click
 import objc
@@ -171,11 +172,14 @@ def add_asset_id_to_quicktime_file(
         asset_id: The asset id to write to the file.
 
     Returns: Error message if there was an error, otherwise None.
+
+    Note: XMP metadata in the QuickTime movie file is not preserved by this function which
+    may result in metadata loss.
     """
-    filepath = str(filepath)
+    filepath = pathlib.Path(filepath)
     with objc.autorelease_pool():
         # rename file so export can write to original path
-        temp_filepath = f".{asset_id}_{filepath}"
+        temp_filepath = filepath.parent / f".{asset_id}_{filepath.name}"
         os.rename(filepath, temp_filepath)
         input_url = NSURL.fileURLWithPath_(str(temp_filepath))
         output_url = NSURL.fileURLWithPath_(str(filepath))
@@ -244,6 +248,18 @@ def make_live_photo(
         The asset_id is written to the ContentIdentifier metadata in the image and video files.
         If the image or video already have a ContentIdentifier, it will be overwritten.
         The image and video files will be modified in place.
+
+        Note: XMP metadata in the QuickTime movie file is not preserved by this function which
+        may result in metadata loss.
+
+        Metadata including EXIF, IPTC, and XMP are preserved in the image file but will be rewritten
+        and the Core Graphics API may change the order of the metadata and normalize the values.
+        For example, the tag XMP:TagsList will be rewritten as XMP:Subject and the value will be
+        normalized to a list of title case strings.
+
+        If you must preserve the original metadata completely, it is recommended to make a copy of the
+        metadata using a tool like exiftool before calling this function and then restore the metadata
+        after calling this function. (But take care not to delete the ContentIdentifier metadata.)
     """
     image_path = pathlib.Path(image_path)
     video_path = pathlib.Path(video_path)
