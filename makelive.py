@@ -218,19 +218,72 @@ def add_asset_id_to_quicktime_file(
         return error or None
 
 
+### Public API ###
+
+
+def make_live_photo(
+    image_path: str | os.PathLike,
+    video_path: str | os.PathLike,
+    asset_id: str | None = None,
+) -> str:
+    """Given a JPEG/HEIC image and a QuickTime video, add the necessary metadata to make it a Live Photo
+
+    Args:
+        image_path: Path to the image file.
+        video_path: Path to the QuickTime movie file.
+        asset_id: The asset id to write to the file; if not provided a unique asset will be created.
+
+    Returns: The asset id (content identifier) written to the photo + video pair.
+
+    Raises:
+        FileNotFoundError: If image_path or video_path do not exist.
+        ValueError: If image_path is not a JPEG or HEIC image or video_path is not a QuickTime movie file.
+
+    Note:
+        If asset_id is not provided, a unique asset id will be generated and used.
+        The asset_id is written to the ContentIdentifier metadata in the image and video files.
+        If the image or video already have a ContentIdentifier, it will be overwritten.
+        The image and video files will be modified in place.
+    """
+    image_path = pathlib.Path(image_path)
+    video_path = pathlib.Path(video_path)
+    if not image_path.exists():
+        raise FileNotFoundError(f"{image_path} does not exist")
+    if not video_path.exists():
+        raise FileNotFoundError(f"{video_path} does not exist")
+    if image_path.suffix.lower() not in [".jpg", ".jpeg", ".heic", ".heif"]:
+        raise ValueError(f"{image_path} is not a JPEG or HEIC image")
+    if video_path.suffix.lower() not in [".mov", ".mp4"]:
+        raise ValueError(f"{video_path} is not a QuickTime movie file")
+    asset_id = asset_id or str(uuid.uuid4()).upper()
+    add_asset_id_to_image_file(image_path, asset_id)
+    add_asset_id_to_quicktime_file(video_path, asset_id)
+    return asset_id
+
+
+### Command line interface ###
+
+
 @click.command()
+@click.version_option(version=__version__)
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    help="Print verbose output",
+)
 @click.argument("image", type=click.Path(exists=True, path_type=pathlib.Path))
 @click.argument("video", type=click.Path(exists=True, path_type=pathlib.Path))
-def main(image: pathlib.Path, video: pathlib.Path):
-    if image.suffix.lower() not in [".jpg", ".jpeg", ".heic"]:
+def main(verbose: bool, image: pathlib.Path, video: pathlib.Path):
+    if image.suffix.lower() not in [".jpg", ".jpeg", ".heic", ".heif"]:
         click.echo(f"{image} is not a JPEG or HEIC image", err=True)
         raise click.Abort()
     if video.suffix.lower() not in [".mov", ".mp4"]:
         click.echo(f"{video} is not a QuickTime movie file", err=True)
         raise click.Abort()
-    asset_id = str(uuid.uuid4()).upper()
-    add_asset_id_to_image_file(image, asset_id)
-    add_asset_id_to_quicktime_file(video, asset_id)
+    asset_id = make_live_photo(image, video)
+    if verbose:
+        click.echo(f"Wrote asset ID: {asset_id} to {image} and {video}")
 
 
 if __name__ == "__main__":

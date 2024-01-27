@@ -7,7 +7,7 @@ This is a simple command line tool that will apply the necessary metadata to a p
 ## Usage
 
 ```bash
-python makelive.py photo.jpg video.mov
+makelive photo.jpg video.mov
 ```
 
 ## Requirements
@@ -19,6 +19,17 @@ python makelive.py photo.jpg video.mov
 
 * `pip install flit`
 * `flit install`
+
+## API
+
+```python
+from makelive import make_live_photo
+
+photo_path = "test.jpg"
+video_path = "test.mov"
+asset_id = make_live_photo(photo_path, video_path)
+print(f"Wrote Asset ID: {asset_id} to {photo_path} and {video_path}")
+```
 
 ## How it works
 
