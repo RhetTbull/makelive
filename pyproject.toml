@@ -23,6 +23,8 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=7.4.2", "pytest-cov", "mypy>=1.6.1"]
+lint = ["ruff>=0.1.14"]
+
 # docs = [
 #     "mkdocs>=1.4.2",
 #     "mkdocs-material>=9.0.13",
@@ -43,3 +45,6 @@ exclude = ["site/**/*", "tests/**/*"]
 
 [tool.mypy]
 ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 130

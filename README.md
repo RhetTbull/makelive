@@ -37,3 +37,7 @@ The source code is available [here](https://github.com/RhetTbull/makelive).
 ## License
 
 MIT License, see [LICENSE](LICENSE) for details.
+
+## Credits
+
+The [Live-Photo-master](https://github.com/GUIYIVIEW/LivePhoto-master) project by [GUIYIVIEW](https://github.com/GUIYIVIEW) was helpful for understanding how to set the asset ID in the QuickTime file. Copyright (c) 2017 GUIYIVIEW and [published under the MIT License](https://github.com/GUIYIVIEW/LivePhoto-master/blob/master/LICENSE).

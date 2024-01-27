@@ -6,7 +6,6 @@ import os
 import pathlib
 import threading
 import uuid
-
 import AVFoundation
 import click
 import objc
@@ -31,6 +30,8 @@ kFigAppleMakerNote_AssetIdentifier = "17"
 kKeyContentIdentifier = "com.apple.quicktime.content.identifier"
 kKeySpaceQuickTimeMetadata = "mdta"
 
+### Functions for adding asset id to image file ###
+
 
 def image_source_from_path(
     image_path: str | os.PathLike,
@@ -40,7 +41,10 @@ def image_source_from_path(
     Args:
         image_path: Path to the image file.
 
-    Returns: CGImageSourceRef
+    Returns: CGImageSourceRef with the image data.
+
+    Raises:
+        ValueError: If the image source could not be created.
     """
     with objc.autorelease_pool():
         image_url = NSURL.fileURLWithPath_(str(image_path))
@@ -50,34 +54,24 @@ def image_source_from_path(
         return image_source
 
 
-def add_asset_id_to_image_file(
-    image_path: str | os.PathLike,
-    asset_id: str,
-) -> None:
-    """Write the asset id to file at image_path and save to destination path"""
-    image_path = str(image_path)
-    with objc.autorelease_pool():
-        image_data = image_source_from_path(image_path)
-        metadata = Quartz.CGImageSourceCopyPropertiesAtIndex(image_data, 0, None)
-        metadata_as_mutable = metadata.mutableCopy()
-        maker_apple = metadata_as_mutable.objectForKey_(
-            Quartz.kCGImagePropertyMakerAppleDictionary
-        )
-        if not maker_apple:
-            maker_apple = NSMutableDictionary.alloc().init()
-        maker_apple.setObject_forKey_(asset_id, kFigAppleMakerNote_AssetIdentifier)
-        metadata_as_mutable.setObject_forKey_(
-            maker_apple, Quartz.kCGImagePropertyMakerAppleDictionary
-        )
-        write_image_with_metadata(image_data, metadata_as_mutable, image_path)
-
-
 def write_image_with_metadata(
     image_data: Quartz.CGImageSourceRef,
     metadata: CFDictionaryRef,
     destination_path: str | os.PathLike,
 ) -> None:
-    """Write image with metadata to destination path"""
+    """Write image with metadata to destination path
+
+    Args:
+        image_data: CGImageSourceRef with the image data.
+        metadata: CFDictionaryRef with the metadata to write.
+        destination_path: Path to write the image to.
+
+    Note:
+        If destination_path already exists, it will be overwritten.
+
+    Raises:
+        ValueError: If the image destination could not be created.
+    """
     destination_path = str(destination_path)
     with objc.autorelease_pool():
         image_type = Quartz.CGImageSourceGetType(image_data)
@@ -105,8 +99,60 @@ def write_image_with_metadata(
             new_image_data.writeToFile_atomically_(destination_path, True)
 
 
+def metadata_dict_for_asset_id(
+    image_data: Quartz.CGImageSourceRef, asset_id: str
+) -> CFDictionaryRef:
+    """Create a CFDictionaryRef with the asset id in the MakerApple dictionary and merge with existing metadata
+
+    Args:
+        image_data: CGImageSourceRef with the image data.
+        asset_id: The asset id to write to the file.
+
+    Returns: CFDictionaryRef with the new metadata dictionary.
+    """
+    with objc.autorelease_pool():
+        metadata = Quartz.CGImageSourceCopyPropertiesAtIndex(image_data, 0, None)
+        metadata_as_mutable = metadata.mutableCopy()
+        maker_apple = metadata_as_mutable.objectForKey_(
+            Quartz.kCGImagePropertyMakerAppleDictionary
+        )
+        if not maker_apple:
+            maker_apple = NSMutableDictionary.alloc().init()
+        maker_apple.setObject_forKey_(asset_id, kFigAppleMakerNote_AssetIdentifier)
+        metadata_as_mutable.setObject_forKey_(
+            maker_apple, Quartz.kCGImagePropertyMakerAppleDictionary
+        )
+        return metadata_as_mutable
+
+
+def add_asset_id_to_image_file(
+    image_path: str | os.PathLike,
+    asset_id: str,
+) -> None:
+    """Write the asset id to file at image_path and save to destination path
+
+    Args:
+        image_path: Path to the image file.
+        asset_id: The asset id to write to the file.
+    """
+    image_path = str(image_path)
+    with objc.autorelease_pool():
+        image_data = image_source_from_path(image_path)
+        metadata = metadata_dict_for_asset_id(image_data, asset_id)
+        write_image_with_metadata(image_data, metadata, image_path)
+
+
+### Functions for adding asset id to QuickTime video file ###
+
+
 def avmetadata_for_asset_id(asset_id: str) -> AVFoundation.AVMetadataItem:
-    """Create an AVMetadataItem for the asset id"""
+    """Create an AVMetadataItem for the given asset id
+
+    Args:
+        asset_id: The asset id to write to the file.
+
+    Returns: AVMetadataItem with the asset id.
+    """
     item = AVFoundation.AVMutableMetadataItem.metadataItem()
     item.setKey_(kKeyContentIdentifier)
     item.setKeySpace_(kKeySpaceQuickTimeMetadata)
@@ -115,7 +161,9 @@ def avmetadata_for_asset_id(asset_id: str) -> AVFoundation.AVMetadataItem:
     return item
 
 
-def add_asset_id_to_quicktime_file(filepath: str | os.PathLike, asset_id: str) -> str | None:
+def add_asset_id_to_quicktime_file(
+    filepath: str | os.PathLike, asset_id: str
+) -> str | None:
     """Write the asset id to a QuickTime movie file at filepath and save to destination path
 
     Args:
@@ -143,11 +191,10 @@ def add_asset_id_to_quicktime_file(filepath: str | os.PathLike, asset_id: str) -
         export_session.setOutputURL_(output_url)
         export_session.setMetadata_([metadata_item])
 
-        # exportAsynchronouslyWithCompletionHandler_ is an asynchronous method that
-        # return immediately. To wait for the export to complete, use a threading.Event
-        # to block until the completion handler is called.
+        # exportAsynchronouslyWithCompletionHandler_ is an asynchronous method that return immediately
+        # To wait for the export to complete, use a threading.Event to block until the completion handler is called.
         event = threading.Event()
-        error = None 
+        error = None
 
         def _completion_handler():
             nonlocal error
