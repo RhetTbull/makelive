@@ -12,8 +12,10 @@ from functools import cache
 from typing import Any
 
 import pytest
+from click.testing import CliRunner
 
 from makelive import make_live_photo
+from makelive.__main__ import main
 
 TEST_IMAGE: pathlib.Path = pathlib.Path("tests/test.jpeg")
 TEST_VIDEO_MP4: pathlib.Path = pathlib.Path("tests/test.mp4")
@@ -113,3 +115,41 @@ def test_make_live_photo_asset_id(tmp_path):
     assert asset_id == metadata_after["MakerNotes:ContentIdentifier"]
     metadata_after = get_metadata_with_exiftool(test_video)
     assert asset_id == metadata_after["QuickTime:ContentIdentifier"]
+
+
+def test_cli_manual(tmp_path):
+    """Test the CLI with --manual"""
+
+    copy_test_images(tmp_path)
+    test_image = tmp_path / TEST_IMAGE.name
+    test_video = tmp_path / TEST_VIDEO_MOV.name
+
+    runner = CliRunner()
+    results = runner.invoke(main, ["--verbose", "--manual", test_image, test_video])
+    assert results.exit_code == 0
+    assert "Wrote asset ID" in results.output
+
+
+def test_cli_files(tmp_path):
+    """Test the CLI with FILES argument"""
+
+    copy_test_images(tmp_path)
+
+    files = [str(f) for f in tmp_path.glob("*")]
+    runner = CliRunner()
+    results = runner.invoke(main, ["--verbose", *files])
+    assert results.exit_code == 0
+    assert "Wrote asset ID" in results.output
+
+
+def test_cli_bad_files(tmp_path):
+    """Test the CLI with --manual and incorrect files"""
+
+    copy_test_images(tmp_path)
+    test_image = tmp_path / TEST_IMAGE.name
+    test_video = tmp_path / TEST_VIDEO_MOV.name
+
+    runner = CliRunner()
+    results = runner.invoke(main, ["--verbose", "--manual", test_video, test_image])
+    assert results.exit_code != 0
+    assert "is not a JPEG or HEIC" in results.output

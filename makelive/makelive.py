@@ -19,7 +19,6 @@ from Foundation import (
 )
 from wurlitzer import pipes
 
-
 # Constants
 # key for the MakerApple dictionary in the image metadata to store the asset ID
 # exiftool reports this as MakerNote:ContentIdentifier
