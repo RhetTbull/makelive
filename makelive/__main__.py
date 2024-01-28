@@ -3,10 +3,7 @@
 
 from __future__ import annotations
 
-import os
 import pathlib
-from pathlib import Path
-
 import click
 
 from .makelive import make_live_photo
@@ -23,7 +20,7 @@ def find_photo_video_pairs(
     matched_files, unmatched_files, image_files, video_files = [], [], {}, {}
 
     for file_path in file_paths:
-        file_path = Path(file_path)
+        file_path = pathlib.Path(file_path)
         file_stem = file_path.stem
         if file_path.suffix.lower() in IMAGE_EXTENSIONS:
             image_files[file_stem] = str(file_path.resolve())
@@ -40,14 +37,6 @@ def find_photo_video_pairs(
     unmatched_files.extend(video_files.values())
 
     return matched_files, unmatched_files
-
-
-def find_matching_files_in_dir(directory):
-    file_paths = []
-    for root, _, files in os.walk(directory):
-        for file in files:
-            file_paths.append(os.path.join(root, file))
-    return find_photo_video_pairs(file_paths)
 
 
 @click.command()
