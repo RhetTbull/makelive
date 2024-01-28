@@ -153,3 +153,12 @@ def test_cli_bad_files(tmp_path):
     results = runner.invoke(main, ["--verbose", "--manual", test_video, test_image])
     assert results.exit_code != 0
     assert "is not a JPEG or HEIC" in results.output
+
+
+def test_cli_no_files():
+    """Test the CLI with no files"""
+
+    runner = CliRunner()
+    results = runner.invoke(main, ["--verbose"])
+    assert results.exit_code != 0
+    assert "No files specified" in results.output

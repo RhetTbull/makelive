@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import pathlib
+
 import click
 
 from .makelive import make_live_photo
@@ -81,6 +82,12 @@ def main(
 
     Files that are not jpeg/heic or mov/mp4 will be ignored.
     """
+
+    # if no files are passed (either via manual or files), print help and exit
+    if not manual and not files:
+        click.echo("No files specified", err=True)
+        click.echo(main.get_help(click.Context(main)))
+        raise click.Abort()
 
     # process manual files first
     for image, video in manual:
