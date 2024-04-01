@@ -8,21 +8,13 @@ from collections.abc import Iterable
 
 import click
 
-from .makelive import (
-    is_image_file,
-    is_live_photo_pair,
-    is_video_file,
-    live_id,
-    make_live_photo,
-)
+from .makelive import is_image_file, is_live_photo_pair, is_video_file, make_live_photo
 from .version import __version__
 
 
 def find_photo_video_pairs(
     file_paths: Iterable[str | os.PathLike],
-) -> tuple[
-    list[tuple[pathlib.Path, pathlib.Path]], list[pathlib.Path]
-]:  # noqa: E501 (line too long
+) -> tuple[list[tuple[pathlib.Path, pathlib.Path]], list[pathlib.Path]]:  # noqa: E501 (line too long
     """Find photo and video pairs in a list of file paths."""
     matched_files, unmatched_files, image_files, video_files = [], [], {}, {}
 
@@ -44,6 +36,14 @@ def find_photo_video_pairs(
     unmatched_files.extend(video_files.values())
 
     return matched_files, unmatched_files
+
+
+def check_pair(image: pathlib.Path, video: pathlib.Path):
+    """Check if a photo and video pair is a Live Photo."""
+    if check_id := is_live_photo_pair(image, video):
+        click.echo(f"{image} and {video} are Live Photos: {check_id}")
+    else:
+        click.echo(f"{image} and {video} are not Live Photos")
 
 
 @click.command()
@@ -78,7 +78,7 @@ def main(
     check: bool,
     verbose: bool,
     manual: tuple[tuple[pathlib.Path, pathlib.Path]],
-    files: tuple[pathlib.Path],
+    files: tuple[pathlib.Path, ...],
 ):
     """MakeLive: convert a photo (JPEG or HEIC) and video (MOV or MP4) pair to a Live Photo.
 
@@ -110,19 +110,19 @@ def main(
         if not is_video_file(video):
             click.echo(f"{video} is not a QuickTime movie file", err=True)
             raise click.Abort()
-        asset_id = make_live_photo(image, video)
-        if verbose:
-            click.echo(f"Wrote asset ID: {asset_id} to {image} and {video}")
+        if check:
+            check_pair(image, video)
+        else:
+            asset_id = make_live_photo(image, video)
+            if verbose:
+                click.echo(f"Wrote asset ID: {asset_id} to {image} and {video}")
 
     # process any files passed via FILES argument
     matched_files, unmatched_files = find_photo_video_pairs(files)
 
     for image, video in matched_files:
         if check:
-            if check_id := is_live_photo_pair(image, video):
-                click.echo(f"{image} and {video} are Live Photos: {check_id}")
-            else:
-                click.echo(f"{image} and {video} are not Live Photos")
+            check_pair(image, video)
         else:
             asset_id = make_live_photo(image, video)
             if verbose:

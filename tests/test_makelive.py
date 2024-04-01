@@ -186,3 +186,16 @@ def test_cli_no_files():
     results = runner.invoke(main, ["--verbose"])
     assert results.exit_code != 0
     assert "No files specified" in results.output
+
+
+def test_cli_check(tmp_path):
+    """Test CLI with --check"""
+
+    copy_test_images(tmp_path)
+    test_image = tmp_path / TEST_IMAGE.name
+    test_video = tmp_path / TEST_VIDEO_MOV.name
+
+    runner = CliRunner()
+    results = runner.invoke(main, ["--check", str(test_image), str(test_video)])
+    assert results.exit_code == 0
+    assert "are not Live Photos" in results.output
