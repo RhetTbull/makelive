@@ -116,6 +116,8 @@ echo "Changing to \${CODE_DIR}/${PROJECT_NAME}"
 cd \${CODE_DIR}/${PROJECT_NAME}
 echo "Pulling latest code and building package"
 git pull
+mkdir -p build
+mkdir -p dist
 applecrate build
 
 if [ \$? -ne 0 ]; then
