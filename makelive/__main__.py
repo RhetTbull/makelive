@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
+from collections.abc import Iterable
 
 import click
 
@@ -17,18 +19,20 @@ from .version import __version__
 
 
 def find_photo_video_pairs(
-    file_paths: list[str],
-) -> tuple[list[tuple[str, str]], list[str]]:  # noqa: E501 (line too long
+    file_paths: Iterable[str | os.PathLike],
+) -> tuple[
+    list[tuple[pathlib.Path, pathlib.Path]], list[pathlib.Path]
+]:  # noqa: E501 (line too long
     """Find photo and video pairs in a list of file paths."""
     matched_files, unmatched_files, image_files, video_files = [], [], {}, {}
 
-    for file_path in file_paths:
-        file_path = pathlib.Path(file_path)
+    for fp in file_paths:
+        file_path = pathlib.Path(fp)
         file_stem = file_path.stem
         if is_image_file(file_path):
-            image_files[file_stem] = str(file_path.resolve())
+            image_files[file_stem] = file_path.resolve()
         elif is_video_file(file_path):
-            video_files[file_stem] = str(file_path.resolve())
+            video_files[file_stem] = file_path.resolve()
 
     for key, image_file in image_files.items():
         if key in video_files:
@@ -115,9 +119,8 @@ def main(
 
     for image, video in matched_files:
         if check:
-            if is_live_photo_pair(image, video):
-                asset_id = live_id(image)
-                click.echo(f"{image} and {video} are Live Photos: {asset_id}")
+            if check_id := is_live_photo_pair(image, video):
+                click.echo(f"{image} and {video} are Live Photos: {check_id}")
             else:
                 click.echo(f"{image} and {video} are not Live Photos")
         else:
