@@ -19,7 +19,38 @@ makelive image_1234.jpg image_1234.mov
 
 ## Installation
 
+### Install via Pre-Built Binary Installer Package
+
+Download and run the latest installer package for your Mac architecture from the [releases page](https://github.com/RhetTbull/makelive/releases).
+
+### Install via pip or pipx
+
+Alternatively, you can install from PyPI:
+
 * `python3 -m pip install makelive`
+
+Or you can use [pipx](https://github.com/pypa/pipx):
+
+* Open `Terminal` (search for `Terminal` in Spotlight or look in `Applications/Utilities`)
+* Install `homebrew` according to instructions at [https://brew.sh/](https://brew.sh/)
+* Type the following into Terminal: `brew install pipx`
+* Ensure that pipx installed packages are accessible in your PATH by typing: `pipx ensurepath`
+* Then type this: `pipx install makelive`
+* Now you should be able to run `makelive` by typing: `makelive`
+
+Once you've installed makelive with pipx, to upgrade to the latest version:
+
+    pipx upgrade makelive
+
+**Note**: When installing other packages with homebrew, homebrew may update the version of Python installed which would then cause any app (including makelive) installed with `pipx` to fail. If this happens, the easiest fix is to reinstall makelive with:
+
+    pipx reinstall makelive
+
+Alternatively, you can reinstall all apps installed with `pipx` with:
+
+    pipx reinstall-all
+
+### Install from Source
 
 To install from source:
 
@@ -79,4 +110,4 @@ MIT License, see [LICENSE](LICENSE) for details.
 
 The [Live-Photo-master](https://github.com/GUIYIVIEW/LivePhoto-master) project by [GUIYIVIEW](https://github.com/GUIYIVIEW) was helpful for understanding how to set the asset ID in the QuickTime file. Copyright (c) 2017 GUIYIVIEW and [published under the MIT License](https://github.com/GUIYIVIEW/LivePhoto-master/blob/master/LICENSE).
 
-Thank you to [Yorian](https://github.com/Yorian) who proposed this project and provided the test images. For more information, see [this discussion](https://github.com/RhetTbull/osxphotos/discussions/1398).
+Thank you to [Yorian](https://github.com/Yorian) who proposed this project and provided the test images. For more information, see [this discussion](https://github.com/RhetTbull/makelive/discussions/1398).
