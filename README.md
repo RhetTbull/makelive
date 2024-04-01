@@ -30,6 +30,8 @@ To install from source:
 
 ## API
 
+You can use makelive to programmatically create Live Photo pairs:
+
 ```python
 from makelive import make_live_photo
 
@@ -37,6 +39,16 @@ photo_path = "test.jpg"
 video_path = "test.mov"
 asset_id = make_live_photo(photo_path, video_path)
 print(f"Wrote Asset ID: {asset_id} to {photo_path} and {video_path}")
+```
+
+You can also check if a photo and video pair are a Live Photo pair and get the asset ID:
+
+```python
+from makelive import live_id, is_live_photo_pair
+photo_path = "test.jpg"
+video_path = "test.mov"
+print(f"Is Live Photo Pair: {is_live_photo_pair(photo_path, video_path)}")
+print(f"Asset ID: {live_id(photo_path)}")
 ```
 
 **Note:** XMP metadata in the QuickTime movie file is not preserved by this function which may result in metadata loss.

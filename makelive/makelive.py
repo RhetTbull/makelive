@@ -8,6 +8,7 @@ import threading
 import uuid
 
 import AVFoundation
+import cgmetadata
 import objc
 import Quartz
 from Foundation import (
@@ -74,9 +75,13 @@ def write_image_with_metadata(
     with objc.autorelease_pool():
         image_type = Quartz.CGImageSourceGetType(image_data)
         dest_data = NSMutableData.data()
-        destination = Quartz.CGImageDestinationCreateWithData(dest_data, image_type, 1, None)
+        destination = Quartz.CGImageDestinationCreateWithData(
+            dest_data, image_type, 1, None
+        )
         if not destination:
-            raise ValueError(f"Could not create image destination for {destination_path}")
+            raise ValueError(
+                f"Could not create image destination for {destination_path}"
+            )
         with pipes() as (_out, _err):
             # use pipes to catch error messages from CGImageDestinationAddImageFromSource
             # there's a bug in Core Graphics that causes an error similar to
@@ -85,13 +90,17 @@ def write_image_with_metadata(
             # to output to stderr/console but the image is still written correctly
             # reference: https://github.com/biodranik/HEIF/issues/5 and
             # https://forums.developer.apple.com/forums/thread/722204
-            Quartz.CGImageDestinationAddImageFromSource(destination, image_data, 0, metadata)
+            Quartz.CGImageDestinationAddImageFromSource(
+                destination, image_data, 0, metadata
+            )
             Quartz.CGImageDestinationFinalize(destination)
             new_image_data = NSData.dataWithData_(dest_data)
             new_image_data.writeToFile_atomically_(destination_path, True)
 
 
-def metadata_dict_for_asset_id(image_data: Quartz.CGImageSourceRef, asset_id: str) -> CFDictionaryRef:
+def metadata_dict_for_asset_id(
+    image_data: Quartz.CGImageSourceRef, asset_id: str
+) -> CFDictionaryRef:
     """Create a CFDictionaryRef with the asset id in the MakerApple dictionary and merge with existing metadata
 
     Args:
@@ -103,11 +112,15 @@ def metadata_dict_for_asset_id(image_data: Quartz.CGImageSourceRef, asset_id: st
     with objc.autorelease_pool():
         metadata = Quartz.CGImageSourceCopyPropertiesAtIndex(image_data, 0, None)
         metadata_as_mutable = metadata.mutableCopy()
-        maker_apple = metadata_as_mutable.objectForKey_(Quartz.kCGImagePropertyMakerAppleDictionary)
+        maker_apple = metadata_as_mutable.objectForKey_(
+            Quartz.kCGImagePropertyMakerAppleDictionary
+        )
         if not maker_apple:
             maker_apple = NSMutableDictionary.alloc().init()
         maker_apple.setObject_forKey_(asset_id, kFigAppleMakerNote_AssetIdentifier)
-        metadata_as_mutable.setObject_forKey_(maker_apple, Quartz.kCGImagePropertyMakerAppleDictionary)
+        metadata_as_mutable.setObject_forKey_(
+            maker_apple, Quartz.kCGImagePropertyMakerAppleDictionary
+        )
         return metadata_as_mutable
 
 
@@ -147,7 +160,9 @@ def avmetadata_for_asset_id(asset_id: str) -> AVFoundation.AVMetadataItem:
     return item
 
 
-def add_asset_id_to_quicktime_file(filepath: str | os.PathLike, asset_id: str) -> str | None:
+def add_asset_id_to_quicktime_file(
+    filepath: str | os.PathLike, asset_id: str
+) -> str | None:
     """Write the asset id to a QuickTime movie file at filepath and save to destination path
 
     Args:
@@ -168,8 +183,10 @@ def add_asset_id_to_quicktime_file(filepath: str | os.PathLike, asset_id: str) -
         output_url = NSURL.fileURLWithPath_(str(filepath))
         asset = AVFoundation.AVAsset.assetWithURL_(input_url)
         metadata_item = avmetadata_for_asset_id(asset_id)
-        export_session = AVFoundation.AVAssetExportSession.alloc().initWithAsset_presetName_(
-            asset, AVFoundation.AVAssetExportPresetPassthrough
+        export_session = (
+            AVFoundation.AVAssetExportSession.alloc().initWithAsset_presetName_(
+                asset, AVFoundation.AVAssetExportPresetPassthrough
+            )
         )
 
         export_session.setOutputFileType_(AVFoundation.AVFileTypeQuickTimeMovie)
@@ -201,6 +218,18 @@ def add_asset_id_to_quicktime_file(filepath: str | os.PathLike, asset_id: str) -
             os.unlink(temp_filepath)
 
         return error or None
+
+
+def is_image_file(filepath: str | os.PathLike):
+    """Return True if the file is a JPEG or HEIC image file"""
+    filepath = pathlib.Path(filepath)
+    return filepath.suffix.lower() in [".jpg", ".jpeg", ".heic", ".heif"]
+
+
+def is_video_file(filepath: str | os.PathLike):
+    """Return True if the file is a MOV or MP4 video file"""
+    filepath = pathlib.Path(filepath)
+    return filepath.suffix.lower() in [".mov", ".mp4"]
 
 
 ### Public API ###
@@ -248,11 +277,85 @@ def make_live_photo(
         raise FileNotFoundError(f"{image_path} does not exist")
     if not video_path.exists():
         raise FileNotFoundError(f"{video_path} does not exist")
-    if image_path.suffix.lower() not in [".jpg", ".jpeg", ".heic", ".heif"]:
+    if not is_image_file(image_path):
         raise ValueError(f"{image_path} is not a JPEG or HEIC image")
-    if video_path.suffix.lower() not in [".mov", ".mp4"]:
+    if not is_video_file(video_path):
         raise ValueError(f"{video_path} is not a QuickTime movie file")
     asset_id = asset_id or str(uuid.uuid4()).upper()
     add_asset_id_to_image_file(image_path, asset_id)
     add_asset_id_to_quicktime_file(video_path, asset_id)
     return asset_id
+
+
+def live_id(filepath: str | os.PathLike) -> str | None:
+    """Returns the Live Photo Content Identifier for the file or None
+
+    Args:
+        filepath: Path to the image or video file.
+
+    Returns: The content identifier for the Live Photo or None if not found.
+
+    Note: The content identifier (stored in Maker Notes with key "17" for images and
+        in QuickTime metadata for videos) is used by Photos to link the image and video files
+        together as a Live Photo.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
+        ValueError: If the file is not a JPEG/HEIC image or MOV/MP4 video file.
+    """
+    filepath = pathlib.Path(filepath)
+    if not filepath.exists():
+        raise FileNotFoundError(f"{filepath} does not exist")
+
+    if is_image_file(filepath):
+        md = cgmetadata.ImageMetadata(filepath)
+        try:
+            return md.asdict()["MakerApple"]["17"]
+        except KeyError:
+            return None
+    elif is_video_file(filepath):
+        with objc.autorelease_pool():
+            url = NSURL.fileURLWithPath_(str(filepath))
+            asset = AVFoundation.AVAsset.assetWithURL_(url)
+            for item in asset.metadata():
+                if (
+                    item.key() == kKeyContentIdentifier
+                    and item.keySpace() == kKeySpaceQuickTimeMetadata
+                ):
+                    return str(item.value())
+        return None
+    else:
+        raise ValueError(f"{filepath} is not a JPEG/HEIC image or MOV/MP4 video file")
+
+
+def is_live_photo_pair(
+    image_path: str | os.PathLike, video_path: str | os.PathLike
+) -> str | bool:
+    """Check if the image and video pair are a Live Photo
+
+    Args:
+        image_path: Path to the image file.
+        video_path: Path to the QuickTime movie file.
+
+    Returns: Asset ID if the file pair is a Live Photo (truthy value), False otherwise.
+
+    Raises:
+        FileNotFoundError: If image_path or video_path does not exist.
+        ValueError: If image_path is not a JPEG or HEIC image or video_path is not a QuickTime movie file.
+    """
+    image_path = pathlib.Path(image_path)
+    video_path = pathlib.Path(video_path)
+    if not image_path.exists():
+        raise FileNotFoundError(f"{image_path} does not exist")
+    if not video_path.exists():
+        raise FileNotFoundError(f"{video_path} does not exist")
+
+    if not is_image_file(image_path):
+        raise ValueError("Image file is not a JPEG or HEIC image")
+    if not is_video_file(video_path):
+        raise ValueError("Video file is not a QuickTime movie file")
+
+    if image_id := live_id(image_path):
+        if video_id := live_id(video_path):
+            return image_id if image_id == video_id else False
+    return False

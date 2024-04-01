@@ -1,17 +1,19 @@
 """Command line interface for makelive."""
 
-
 from __future__ import annotations
 
 import pathlib
 
 import click
 
-from .makelive import make_live_photo
+from .makelive import (
+    is_image_file,
+    is_live_photo_pair,
+    is_video_file,
+    live_id,
+    make_live_photo,
+)
 from .version import __version__
-
-IMAGE_EXTENSIONS = [".jpeg", ".jpg", ".heic", ".heif"]
-VIDEO_EXTENSIONS = [".mov", ".mp4"]
 
 
 def find_photo_video_pairs(
@@ -23,9 +25,9 @@ def find_photo_video_pairs(
     for file_path in file_paths:
         file_path = pathlib.Path(file_path)
         file_stem = file_path.stem
-        if file_path.suffix.lower() in IMAGE_EXTENSIONS:
+        if is_image_file(file_path):
             image_files[file_stem] = str(file_path.resolve())
-        elif file_path.suffix.lower() in VIDEO_EXTENSIONS:
+        elif is_video_file(file_path):
             video_files[file_stem] = str(file_path.resolve())
 
     for key, image_file in image_files.items():
@@ -42,6 +44,12 @@ def find_photo_video_pairs(
 
 @click.command()
 @click.version_option(version=__version__)
+@click.option(
+    "-c",
+    "--check",
+    is_flag=True,
+    help="Check if file pair is a Live Photo but do not modify it",
+)
 @click.option(
     "-v",
     "--verbose",
@@ -63,6 +71,7 @@ def find_photo_video_pairs(
     type=click.Path(exists=True, path_type=pathlib.Path),
 )
 def main(
+    check: bool,
     verbose: bool,
     manual: tuple[tuple[pathlib.Path, pathlib.Path]],
     files: tuple[pathlib.Path],
@@ -91,10 +100,10 @@ def main(
 
     # process manual files first
     for image, video in manual:
-        if image.suffix.lower() not in IMAGE_EXTENSIONS:
+        if not is_image_file(image):
             click.echo(f"{image} is not a JPEG or HEIC image", err=True)
             raise click.Abort()
-        if video.suffix.lower() not in VIDEO_EXTENSIONS:
+        if not is_video_file(video):
             click.echo(f"{video} is not a QuickTime movie file", err=True)
             raise click.Abort()
         asset_id = make_live_photo(image, video)
@@ -105,9 +114,16 @@ def main(
     matched_files, unmatched_files = find_photo_video_pairs(files)
 
     for image, video in matched_files:
-        asset_id = make_live_photo(image, video)
-        if verbose:
-            click.echo(f"Wrote asset ID: {asset_id} to {image} and {video}")
+        if check:
+            if is_live_photo_pair(image, video):
+                asset_id = live_id(image)
+                click.echo(f"{image} and {video} are Live Photos: {asset_id}")
+            else:
+                click.echo(f"{image} and {video} are not Live Photos")
+        else:
+            asset_id = make_live_photo(image, video)
+            if verbose:
+                click.echo(f"Wrote asset ID: {asset_id} to {image} and {video}")
     for file in unmatched_files:
         click.echo(f"No matching file pair found for {file}", err=True)
 

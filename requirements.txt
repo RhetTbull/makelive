@@ -1,3 +1,4 @@
+cgmetadata>=0.1.6
 click>=8.0
 pyobjc-core>=9.2
 pyobjc-framework-AVFoundation>=9.2

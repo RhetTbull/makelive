@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 from click.testing import CliRunner
 
-from makelive import make_live_photo
+from makelive import is_live_photo_pair, live_id, make_live_photo
 from makelive.__main__ import main
 
 TEST_IMAGE: pathlib.Path = pathlib.Path("tests/test.jpeg")
@@ -115,6 +115,30 @@ def test_make_live_photo_asset_id(tmp_path):
     assert asset_id == metadata_after["MakerNotes:ContentIdentifier"]
     metadata_after = get_metadata_with_exiftool(test_video)
     assert asset_id == metadata_after["QuickTime:ContentIdentifier"]
+
+
+@pytest.mark.skipif(get_exiftool_path() is None, reason="exiftool not found")
+def test_is_live_photo_pair(tmp_path):
+    """Test is_live_photo_pair with an image"""
+
+    copy_test_images(tmp_path)
+    test_image = tmp_path / TEST_IMAGE.name
+    test_video = tmp_path / TEST_VIDEO_MOV.name
+    assert not is_live_photo_pair(test_image, test_video)
+    asset_id = make_live_photo(test_image, test_video)
+    assert is_live_photo_pair(test_image, test_video) == asset_id
+
+
+@pytest.mark.skipif(get_exiftool_path() is None, reason="exiftool not found")
+def test_live_id(tmp_path):
+    """Test live_id with an image"""
+
+    copy_test_images(tmp_path)
+    test_image = tmp_path / TEST_IMAGE.name
+    test_video = tmp_path / TEST_VIDEO_MOV.name
+    assert not live_id(test_image)
+    asset_id = make_live_photo(test_image, test_video)
+    assert live_id(test_image) == asset_id
 
 
 def test_cli_manual(tmp_path):
