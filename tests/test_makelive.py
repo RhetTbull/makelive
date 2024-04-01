@@ -199,3 +199,8 @@ def test_cli_check(tmp_path):
     results = runner.invoke(main, ["--check", str(test_image), str(test_video)])
     assert results.exit_code == 0
     assert "are not Live Photos" in results.output
+
+    results = runner.invoke(main, [str(test_image), str(test_video)])
+    assert results.exit_code == 0
+    results = runner.invoke(main, ["--check", str(test_image), str(test_video)])
+    assert "are Live Photos" in results.output
