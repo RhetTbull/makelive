@@ -36,3 +36,7 @@ Tests require that [exiftool](https://exiftool.org) is installed and available o
 ## Publishing
 
 - `flit publish`
+
+## Building the binary distribution
+
+After publishing the latest release, run `./build.sh` to build the binary with [PyApp](https://github.com/ofek/pyapp) and the installer package with [AppleCrate](https://github.com/RhetTbull/applecrate).
