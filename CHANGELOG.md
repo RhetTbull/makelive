@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.1](https://github.com/RhetTbull/makelive/compare/v0.6.0...v0.6.1)
+
+Fixed example in README.md.
+
+### 2024-06-18
+
+#### Added
+
+#### Changed
+
+#### Removed
+
+#### Fixed
+
+- Example code in README.md.
+
+#### Contributors
+
 ## [v0.6.0](https://github.com/RhetTbull/makelive/compare/v0.5.0...v0.6.0)
 
 Added `--pvt` option to create `.pvt` Live Photo packages.
