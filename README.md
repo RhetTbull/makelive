@@ -86,14 +86,14 @@ print(f"Is Live Photo Pair: {is_live_photo_pair(photo_path, video_path)}")
 print(f"Asset ID: {live_id(photo_path)}")
 ```
 
-Live Photos can also be created as a [.pvt package](https://fileinfo.com/extension/pvt). Use `make_pvt` to create a .pvt package from a photo and video pair. This is useful for creating Live Photos that can be shared via AirDrop or other methods that may not preserve the Live Photo metadata. Unlike `make_live_photo`, `make_pvt` does not modify the original photo and video files but instead copies them into a .pvt package and modifies the copies.
+Live Photos can also be created as a [.pvt package](https://fileinfo.com/extension/pvt). Use `save_live_photo_pair_as_pvt` to create a .pvt package from a photo and video pair. This is useful for creating Live Photos that can be shared via AirDrop or other methods that may not preserve the Live Photo metadata. Unlike `make_live_photo`, `save_live_photo_pair_as_pvt` does not modify the original photo and video files but instead copies them into a `.pvt` package and modifies the copies. If the original photo and video are already a Live Photo pair, the `.pvt` package will be created with the same asset ID; if not, a new asset ID will be generated.
 
 ```python
-from makelive import make_pvt
+from makelive import save_live_photo_pair_as_pvt
 photo_path = "test.jpg"
 video_path = "test.mov"
-pvt_path = make_pvt(photo_path, video_path)
-print(f"Wrote .pvt package to {pvt_path}")
+asset_id, pvt_path = save_live_photo_pair_as_pvt(photo_path, video_path)
+print(f"Wrote .pvt package to {pvt_path} with {asset_id}")
 ```
 
 > [!NOTE]
