@@ -8,7 +8,14 @@ from collections.abc import Iterable
 
 import click
 
-from .makelive import is_image_file, is_live_photo_pair, is_video_file, make_live_photo, save_live_photo_pair_as_pvt
+from .makelive import (
+    is_image_file,
+    is_live_photo_pair,
+    is_video_file,
+    live_id,
+    make_live_photo,
+    save_live_photo_pair_as_pvt,
+)
 from .version import __version__
 
 
@@ -66,7 +73,8 @@ def check_pair(image: pathlib.Path, video: pathlib.Path):
     "-p",
     "--pvt",
     is_flag=True,
-    help="Save the Live Photo Pair as a .pvt package",
+    help="Save the Live Photo pair as a .pvt package. "
+    "Unlike the default behavior, this will not modify the original files.",
 )
 @click.option(
     "--manual",
@@ -122,9 +130,14 @@ def main(
         if check:
             check_pair(image, video)
         else:
-            asset_id = make_live_photo(image, video)
+            if pvt:
+                asset_id, pvt_file = save_live_photo_pair_as_pvt(image, video)
+            else:
+                asset_id = make_live_photo(image, video)
             if verbose:
                 click.echo(f"Wrote asset ID: {asset_id} to {image} and {video}")
+                if pvt:
+                    click.echo(f"Saved {image} and {video} to {pvt_file}")
 
     # process any files passed via FILES argument
     matched_files, unmatched_files = find_photo_video_pairs(files)
@@ -133,13 +146,15 @@ def main(
         if check:
             check_pair(image, video)
         else:
-            asset_id = make_live_photo(image, video)
             if pvt:
-                save_live_photo_pair_as_pvt(image, video)
+                asset_id, pvt_file = save_live_photo_pair_as_pvt(image, video)
+                asset_id = live_id(pvt_file / pathlib.Path(image).name)
+            else:
+                asset_id = make_live_photo(image, video)
             if verbose:
-                if pvt:
-                    click.echo(f"Saved {image} and {video} as a {image.with_suffix(".pvt")} package")
                 click.echo(f"Wrote asset ID: {asset_id} to {image} and {video}")
+                if pvt:
+                    click.echo(f"Saved {image} and {video} to {pvt_file}")
     for file in unmatched_files:
         click.echo(f"No matching file pair found for {file}", err=True)
 

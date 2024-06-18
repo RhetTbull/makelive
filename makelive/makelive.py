@@ -288,12 +288,12 @@ def make_live_photo(
     return asset_id
 
 
-def make_pvt(
+def save_live_photo_pair_as_pvt(
     image_path: str | os.PathLike,
     video_path: str | os.PathLike,
     pvt_path: str | os.PathLike | None = None,
     asset_id: str | None = None,
-) -> pathlib.Path:
+) -> tuple[str, pathlib.Path]:
     """Given a JPEG/HEIC image and a QuickTime video, add the necessary metadata to make it a Live Photo
     and package as a .pvt package which can be double-clicked to import into Photos as a Live Photo.
 
@@ -303,7 +303,7 @@ def make_pvt(
         pvt_path: Path to directory in which to write the .pvt package file; if None, writes the .pvt file in the parent of the image_path.
         asset_id: The asset id to write to the file; if not provided a unique asset will be created.
 
-    Returns: Path to the .pvt package file.
+    Returns: Tuple of Asset ID, Path to the .pvt package file.
 
     Raises:
         FileNotFoundError: If image_path or video_path do not exist.
@@ -340,30 +340,35 @@ def _make_pvt_package(
     video_path: pathlib.Path,
     pvt_path: pathlib.Path,
     asset_id: str | None = None,
-) -> pathlib.Path:
+) -> tuple[str, pathlib.Path]:
     """Create a .pvt Live Photo package from an image and video file."""
     pvt_path.mkdir(exist_ok=True)
     shutil.copy(image_path, pvt_path)
     shutil.copy(video_path, pvt_path)
     image_path = pvt_path / image_path.name
     video_path = pvt_path / video_path.name
-    asset_id = make_live_photo(image_path, video_path, asset_id)
+
+    # if not already a Live Pair or asset_id is not None, make it a Live Pair with the asset_id if provided
+    if not is_live_photo_pair(image_path, video_path) or asset_id is not None:
+        asset_id = make_live_photo(image_path, video_path, asset_id)
+    else:
+        asset_id = live_id(image_path)
 
     # create the metadata.plist file
-    with open(pvt_path / "metadata.plist", "w") as f:
-        f.write(
-            """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    xml_metadata = """
+        <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
         <plist version="1.0">
             <dict>
                 <key>PFVideoComplementMetadataVersionKey</key>
                 <string>1</string>
             </dict>
-        </plist>"""
-        )
+        </plist>
+        """
 
-    return pvt_path
+    with open(pvt_path / "metadata.plist", "w") as metadata_file:
+        metadata_file.write(xml_metadata)
+
+    return asset_id, pvt_path
 
 
 def live_id(filepath: str | os.PathLike) -> str | None:
@@ -438,49 +443,3 @@ def is_live_photo_pair(
         if video_id := live_id(video_path):
             return image_id if image_id == video_id else False
     return False
-
-def save_live_photo_pair_as_pvt(
-    image_path: str | os.PathLike,
-    video_path: str | os.PathLike,
-) -> str:
-    """
-    Save a Live Photo pair as a .pvt package
-
-    Args:
-        image_path: Path to the image file.
-        video_path: Path to the QuickTime movie file.
-
-    Returns:
-        Path to the .pvt package.
-
-    Raises:
-        ValueError: If the image and video pair are not a Live Photo pair.
-    """
-
-    # First check if the image and video pair are a Live Photo pair
-    if not is_live_photo_pair(image_path, video_path):
-        raise ValueError("Image and video pair are not a Live Photo pair and therefore cannot be saved as a package.")
-    
-    xml_metadata = (
-        '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" '
-        '"http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict>'
-        '<key>PFVideoComplementMetadataVersionKey</key><string>1</string></dict></plist>'
-    )
-
-    pvt_path = pathlib.Path(image_path).with_suffix(".pvt")
-
-    # Create .pvt container
-    os.makedirs(pvt_path, exist_ok=True)
-
-    # Copy image and video files to .pvt container
-    image_path = pathlib.Path(image_path)
-    video_path = pathlib.Path(video_path)
-
-    shutil.copy(image_path, pvt_path / image_path.name)
-    shutil.copy(video_path, pvt_path / video_path.name)
-
-    # Create metadata file
-    with open(pvt_path / "metadata.plist", "w") as metadata_file:
-        metadata_file.write(xml_metadata)
-
-    return pvt_path
