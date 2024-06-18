@@ -8,6 +8,7 @@ from collections.abc import Iterable
 
 import click
 
+
 from .makelive import (
     is_image_file,
     is_live_photo_pair,
@@ -149,10 +150,11 @@ def main(
         else:
             if pvt:
                 asset_id, pvt_file = save_live_photo_pair_as_pvt(image, video)
-                asset_id = live_id(pvt_file / pathlib.Path(image).name)
             else:
                 asset_id = make_live_photo(image, video)
             if verbose:
+                if pvt:
+                    click.echo(f"Saved {image} and {video} as a {image.with_suffix(".pvt")} package")
                 click.echo(f"Wrote asset ID: {asset_id} to {image} and {video}")
                 if pvt:
                     click.echo(f"Saved {image} and {video} to {pvt_file}")
