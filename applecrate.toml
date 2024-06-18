@@ -2,12 +2,12 @@
 # The version in this file will be updated by bump2version
 
 app = "makelive"
-version = "0.5.0"
+version = "0.6.0"
 identifier = "org.rhettbull.makelive"
 license = "LICENSE"
 install = [
     [
-        "build/makelive-0.5.0-{{ machine }}",
+        "build/makelive-0.6.0-{{ machine }}",
         "/usr/local/bin/makelive",
     ],
 ]

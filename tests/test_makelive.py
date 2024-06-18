@@ -196,13 +196,9 @@ def test_save_live_photo_pair_as_pvt(tmp_path):
 
     test_image, test_video, _ = copy_test_images(tmp_path)
     asset_id, pvt_file = save_live_photo_pair_as_pvt(test_image, test_video)
-    metadata_after = get_metadata_with_exiftool(
-        pvt_file / pathlib.Path(test_image).name
-    )
+    metadata_after = get_metadata_with_exiftool(pvt_file / pathlib.Path(test_image).name)
     assert asset_id == metadata_after["MakerNotes:ContentIdentifier"]
-    metadata_after = get_metadata_with_exiftool(
-        pvt_file / pathlib.Path(test_video).name
-    )
+    metadata_after = get_metadata_with_exiftool(pvt_file / pathlib.Path(test_video).name)
     assert asset_id == metadata_after["QuickTime:ContentIdentifier"]
 
     # verify originals were not modified
@@ -215,17 +211,11 @@ def test_save_live_photo_pair_as_pvt_asset_id(tmp_path):
 
     test_image, test_video, _ = copy_test_images(tmp_path)
     user_asset_id = str(uuid.uuid4()).upper()
-    asset_id, pvt_file = save_live_photo_pair_as_pvt(
-        test_image, test_video, asset_id=user_asset_id
-    )
-    metadata_after = get_metadata_with_exiftool(
-        pvt_file / pathlib.Path(test_image).name
-    )
+    asset_id, pvt_file = save_live_photo_pair_as_pvt(test_image, test_video, asset_id=user_asset_id)
+    metadata_after = get_metadata_with_exiftool(pvt_file / pathlib.Path(test_image).name)
     assert asset_id == user_asset_id
     assert user_asset_id == metadata_after["MakerNotes:ContentIdentifier"]
-    metadata_after = get_metadata_with_exiftool(
-        pvt_file / pathlib.Path(test_video).name
-    )
+    metadata_after = get_metadata_with_exiftool(pvt_file / pathlib.Path(test_video).name)
     assert user_asset_id == metadata_after["QuickTime:ContentIdentifier"]
 
 
@@ -234,16 +224,10 @@ def test_save_live_photo_pair_as_pvt_pvt_path(tmp_path):
     """Test the save_live_photo_pair_as_pvt() function with user supplied pvt_path"""
 
     test_image, test_video, _ = copy_test_images(tmp_path)
-    asset_id, pvt_file = save_live_photo_pair_as_pvt(
-        test_image, test_video, pvt_path=tmp_path
-    )
-    metadata_after = get_metadata_with_exiftool(
-        pvt_file / pathlib.Path(test_image).name
-    )
+    asset_id, pvt_file = save_live_photo_pair_as_pvt(test_image, test_video, pvt_path=tmp_path)
+    metadata_after = get_metadata_with_exiftool(pvt_file / pathlib.Path(test_image).name)
     assert asset_id == metadata_after["MakerNotes:ContentIdentifier"]
-    metadata_after = get_metadata_with_exiftool(
-        pvt_file / pathlib.Path(test_video).name
-    )
+    metadata_after = get_metadata_with_exiftool(pvt_file / pathlib.Path(test_video).name)
     assert asset_id == metadata_after["QuickTime:ContentIdentifier"]
 
 
@@ -264,9 +248,7 @@ def test_cli_manual_pvt(tmp_path):
     test_image, test_video, _ = copy_test_images(tmp_path)
 
     runner = CliRunner()
-    results = runner.invoke(
-        main, ["--verbose", "--pvt", "--manual", test_image, test_video]
-    )
+    results = runner.invoke(main, ["--verbose", "--pvt", "--manual", test_image, test_video])
     assert results.exit_code == 0
     assert "Wrote asset ID" in results.output
     assert ".pvt" in results.output
