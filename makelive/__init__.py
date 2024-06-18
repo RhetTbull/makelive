@@ -13,5 +13,6 @@ __all__ = [
     "is_live_photo_pair",
     "live_id",
     "make_live_photo",
-    "make_pvt",
+    "make_pvt"
+    "save_live_photo_pair_as_pvt",
 ]
