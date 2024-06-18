@@ -21,3 +21,4 @@ cov.xml
 .doit.db.db
 scratch/
 site/
+pyrightconfig.json

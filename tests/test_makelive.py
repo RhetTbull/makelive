@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 from click.testing import CliRunner
 
-from makelive import is_live_photo_pair, live_id, make_live_photo
+from makelive import is_live_photo_pair, live_id, make_live_photo, make_pvt
 from makelive.__main__ import main
 
 TEST_IMAGE: pathlib.Path = pathlib.Path("tests/test.jpeg")
@@ -183,6 +183,55 @@ def test_live_id(tmp_path):
     assert not live_id(test_image)
     asset_id = make_live_photo(test_image, test_video)
     assert live_id(test_image) == asset_id
+
+
+@pytest.mark.skipif(get_exiftool_path() is None, reason="exiftool not found")
+def test_make_pvt(tmp_path):
+    """Test the make_pvt() function"""
+
+    test_image, test_video, _ = copy_test_images(tmp_path)
+    pvt_file = make_pvt(test_image, test_video)
+    metadata_after = get_metadata_with_exiftool(
+        pvt_file / pathlib.Path(test_image).name
+    )
+    assert metadata_after["MakerNotes:ContentIdentifier"]
+    metadata_after = get_metadata_with_exiftool(
+        pvt_file / pathlib.Path(test_video).name
+    )
+    assert metadata_after["QuickTime:ContentIdentifier"]
+
+
+@pytest.mark.skipif(get_exiftool_path() is None, reason="exiftool not found")
+def test_make_pvt_asset_id(tmp_path):
+    """Test the make_pvt() function with user supplied asset_id"""
+
+    test_image, test_video, _ = copy_test_images(tmp_path)
+    user_asset_id = str(uuid.uuid4()).upper()
+    pvt_file = make_pvt(test_image, test_video, asset_id=user_asset_id)
+    metadata_after = get_metadata_with_exiftool(
+        pvt_file / pathlib.Path(test_image).name
+    )
+    assert user_asset_id == metadata_after["MakerNotes:ContentIdentifier"]
+    metadata_after = get_metadata_with_exiftool(
+        pvt_file / pathlib.Path(test_video).name
+    )
+    assert user_asset_id == metadata_after["QuickTime:ContentIdentifier"]
+
+
+@pytest.mark.skipif(get_exiftool_path() is None, reason="exiftool not found")
+def test_make_pvt_pvt_path(tmp_path):
+    """Test the make_pvt() function with user supplied pvt_path"""
+
+    test_image, test_video, _ = copy_test_images(tmp_path)
+    pvt_file = make_pvt(test_image, test_video, pvt_path=tmp_path)
+    metadata_after = get_metadata_with_exiftool(
+        pvt_file / pathlib.Path(test_image).name
+    )
+    assert metadata_after["MakerNotes:ContentIdentifier"]
+    metadata_after = get_metadata_with_exiftool(
+        pvt_file / pathlib.Path(test_video).name
+    )
+    assert metadata_after["QuickTime:ContentIdentifier"]
 
 
 def test_cli_manual(tmp_path):

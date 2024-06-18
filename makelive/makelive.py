@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import shutil
 import threading
 import uuid
 
@@ -285,6 +286,84 @@ def make_live_photo(
     add_asset_id_to_image_file(image_path, asset_id)
     add_asset_id_to_quicktime_file(video_path, asset_id)
     return asset_id
+
+
+def make_pvt(
+    image_path: str | os.PathLike,
+    video_path: str | os.PathLike,
+    pvt_path: str | os.PathLike | None = None,
+    asset_id: str | None = None,
+) -> pathlib.Path:
+    """Given a JPEG/HEIC image and a QuickTime video, add the necessary metadata to make it a Live Photo
+    and package as a .pvt package which can be double-clicked to import into Photos as a Live Photo.
+
+    Args:
+        image_path: Path to the image file.
+        video_path: Path to the QuickTime movie file.
+        pvt_path: Path to directory in which to write the .pvt package file; if None, writes the .pvt file in the parent of the image_path.
+        asset_id: The asset id to write to the file; if not provided a unique asset will be created.
+
+    Returns: Path to the .pvt package file.
+
+    Raises:
+        FileNotFoundError: If image_path or video_path do not exist.
+        ValueError: If image_path is not a JPEG or HEIC image or video_path is not a QuickTime movie file.
+
+    Note:
+        The .pvt package will have the same stem as the image file with a .pvt extension.
+        If asset_id is not provided, a unique asset id will be generated and used.
+        The asset_id is written to the ContentIdentifier metadata in the image and video files.
+        If the image or video already have a ContentIdentifier, it will be overwritten.
+        The image and video files will be modified in place.
+
+        Note: XMP metadata in the QuickTime movie file is not preserved by this function which
+        may result in metadata loss.
+
+        Metadata including EXIF, IPTC, and XMP are preserved in the image file but will be rewritten
+        and the Core Graphics API may change the order of the metadata and normalize the values.
+        For example, the tag XMP:TagsList will be rewritten as XMP:Subject and the value will be
+        normalized to a list of title case strings.
+
+        If you must preserve the original metadata completely, it is recommended to make a copy of the
+        metadata using a tool like exiftool before calling this function and then restore the metadata
+        after calling this function. (But take care not to delete the ContentIdentifier metadata.)
+    """
+    image_path = pathlib.Path(image_path)
+    video_path = pathlib.Path(video_path)
+    pvt_path = pathlib.Path(pvt_path) if pvt_path else image_path.parent
+    pvt_package = pvt_path / f"{image_path.stem}.pvt"
+    return _make_pvt_package(image_path, video_path, pvt_package, asset_id)
+
+
+def _make_pvt_package(
+    image_path: pathlib.Path,
+    video_path: pathlib.Path,
+    pvt_path: pathlib.Path,
+    asset_id: str | None = None,
+) -> pathlib.Path:
+    """Create a .pvt Live Photo package from an image and video file."""
+    pvt_path.mkdir(exist_ok=True)
+    shutil.copy(image_path, pvt_path)
+    shutil.copy(video_path, pvt_path)
+    image_path = pvt_path / image_path.name
+    video_path = pvt_path / video_path.name
+    asset_id = make_live_photo(image_path, video_path, asset_id)
+
+    # create the metadata.plist file
+    with open(pvt_path / "metadata.plist", "w") as f:
+        f.write(
+            """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+            <dict>
+                <key>PFVideoComplementMetadataVersionKey</key>
+                <string>1</string>
+            </dict>
+        </plist>"""
+        )
+
+    return pvt_path
 
 
 def live_id(filepath: str | os.PathLike) -> str | None:

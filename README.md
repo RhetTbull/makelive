@@ -14,8 +14,8 @@ makelive image_1234.jpg image_1234.mov
 
 ## Requirements
 
-* macOS (Tested on 13.5.1; should work on 10.15+)
-* Python 3.9+
+- macOS (Tested on 13.5.1; should work on 10.15+)
+- Python 3.9+
 
 ## Installation
 
@@ -27,16 +27,16 @@ Download and run the latest installer package for your Mac architecture from the
 
 Alternatively, you can install from PyPI:
 
-* `python3 -m pip install makelive`
+- `python3 -m pip install makelive`
 
 Or you can use [pipx](https://github.com/pypa/pipx):
 
-* Open `Terminal` (search for `Terminal` in Spotlight or look in `Applications/Utilities`)
-* Install `homebrew` according to instructions at [https://brew.sh/](https://brew.sh/)
-* Type the following into Terminal: `brew install pipx`
-* Ensure that pipx installed packages are accessible in your PATH by typing: `pipx ensurepath`
-* Then type this: `pipx install makelive`
-* Now you should be able to run `makelive` by typing: `makelive`
+- Open `Terminal` (search for `Terminal` in Spotlight or look in `Applications/Utilities`)
+- Install `homebrew` according to instructions at [https://brew.sh/](https://brew.sh/)
+- Type the following into Terminal: `brew install pipx`
+- Ensure that pipx installed packages are accessible in your PATH by typing: `pipx ensurepath`
+- Then type this: `pipx install makelive`
+- Now you should be able to run `makelive` by typing: `makelive`
 
 Once you've installed makelive with pipx, to upgrade to the latest version:
 
@@ -55,10 +55,10 @@ Alternatively, you can reinstall all apps installed with `pipx` with:
 
 To install from source:
 
-* `git clone git@github.com:RhetTbull/makelive.git`
-* `cd makelive`
-* `pip install flit`
-* `flit install`
+- `git clone git@github.com:RhetTbull/makelive.git`
+- `cd makelive`
+- `pip install flit`
+- `flit install`
 
 ## API
 
@@ -81,6 +81,16 @@ photo_path = "test.jpg"
 video_path = "test.mov"
 print(f"Is Live Photo Pair: {is_live_photo_pair(photo_path, video_path)}")
 print(f"Asset ID: {live_id(photo_path)}")
+```
+
+Live Photos can also be created as a [.pvt package](https://fileinfo.com/extension/pvt). Use `make_pvt` to create a .pvt package from a photo and video pair. This is useful for creating Live Photos that can be shared via AirDrop or other methods that may not preserve the Live Photo metadata. Unlike `make_live_photo`, `make_pvt` does not modify the original photo and video files but instead copies them into a .pvt package and modifies the copies.
+
+```python
+from makelive import make_pvt
+photo_path = "test.jpg"
+video_path = "test.mov"
+pvt_path = make_pvt(photo_path, video_path)
+print(f"Wrote .pvt package to {pvt_path}")
 ```
 
 > [!NOTE]
