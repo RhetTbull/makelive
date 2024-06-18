@@ -12,7 +12,6 @@ from .makelive import (
     is_image_file,
     is_live_photo_pair,
     is_video_file,
-    live_id,
     make_live_photo,
     save_live_photo_pair_as_pvt,
 )
@@ -21,9 +20,7 @@ from .version import __version__
 
 def find_photo_video_pairs(
     file_paths: Iterable[str | os.PathLike],
-) -> tuple[
-    list[tuple[pathlib.Path, pathlib.Path]], list[pathlib.Path]
-]:  # noqa: E501 (line too long
+) -> tuple[list[tuple[pathlib.Path, pathlib.Path]], list[pathlib.Path]]:  # noqa: E501 (line too long
     """Find photo and video pairs in a list of file paths."""
     matched_files, unmatched_files, image_files, video_files = [], [], {}, {}
 
