@@ -42,8 +42,8 @@ Once you've installed makelive with pipx, to upgrade to the latest version:
 
     pipx upgrade makelive
 
-[!NOTE]
-When installing other packages with homebrew, homebrew may update the version of Python installed which would then cause any app (including makelive) installed with `pipx` to fail. If this happens, the easiest fix is to reinstall makelive with:
+> [!NOTE]
+> When installing other packages with homebrew, homebrew may update the version of Python installed which would then cause any app (including makelive) installed with `pipx` to fail. If this happens, the easiest fix is to reinstall makelive with:
 
     pipx reinstall makelive
 
@@ -83,8 +83,8 @@ print(f"Is Live Photo Pair: {is_live_photo_pair(photo_path, video_path)}")
 print(f"Asset ID: {live_id(photo_path)}")
 ```
 
-[!NOTE]
-XMP metadata in the QuickTime movie file is not preserved by this function which may result in metadata loss.
+> [!NOTE]
+> XMP metadata in the QuickTime movie file is not preserved by this function which may result in metadata loss.
 
 Metadata including EXIF, IPTC, and XMP are preserved in the image file but will be rewritten and the Core Graphics API may change the order of the metadata and normalize the values. For example, the tag XMP:TagsList will be rewritten as XMP:Subject and the value will be normalized to a list of title case strings.
 
@@ -98,8 +98,8 @@ This tool uses the Core Graphics and AV Foundation frameworks to modify the meta
 
 ## Caution
 
-[!WARNING]
-This tool has not yet been extensively tested. It is recommended that you make a backup of your photo and video files before using this tool as it will overwrite the files which is required to add the necessary metadata. This also means that the files will be re-encoded and as a result, the file size may change, as may the quality of the image and video. I've used the native Apple APIs to do the encoding at maxixum quality but you should verify that the results are suitable for your needs.
+> [!WARNING]
+> This tool has not yet been extensively tested. It is recommended that you make a backup of your photo and video files before using this tool as it will overwrite the files which is required to add the necessary metadata. This also means that the files will be re-encoded and as a result, the file size may change, as may the quality of the image and video. I've used the native Apple APIs to do the encoding at maxixum quality but you should verify that the results are suitable for your needs.
 
 ## Source Code
 
