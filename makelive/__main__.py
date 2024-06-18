@@ -74,7 +74,8 @@ def check_pair(image: pathlib.Path, video: pathlib.Path):
     "--pvt",
     is_flag=True,
     help="Save the Live Photo pair as a .pvt package. "
-    "Unlike the default behavior, this will not modify the original files.",
+    "Unlike the default behavior, this will not modify the original files. "
+    "The .pvt package can be imported into Photos as a Live Photo by double-clicking it.",
 )
 @click.option(
     "--manual",
