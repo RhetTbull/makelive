@@ -97,17 +97,17 @@ print(f"Wrote .pvt package to {pvt_path} with {asset_id}")
 ```
 
 > [!NOTE]
-> XMP metadata in the QuickTime movie file is not preserved by this function which may result in metadata loss.
+> XMP metadata in the QuickTime movie file is not preserved when writing the Content Identifier tag to the movie file which may result in metadata loss.
 
 Metadata including EXIF, IPTC, and XMP are preserved in the image file but will be rewritten and the Core Graphics API may change the order of the metadata and normalize the values. For example, the tag XMP:TagsList will be rewritten as XMP:Subject and the value will be normalized to a list of title case strings.
 
-If you must preserve the original metadata completely, it is recommended to make a copy of the metadata using a tool like [exiftool](https://exiftool.org) before calling this function and then restore the metadata after calling this function. (But take care not to delete the ContentIdentifier metadata.)
+If you must preserve the original metadata completely, it is recommended to make a copy of the metadata using a tool like [exiftool](https://exiftool.org) before calling this function and then restore the metadata after calling this function. (But take care not to delete the `ContentIdentifier` metadata.)
 
 ## How it works
 
-In order for Photos to treat a photo + video pair as a Live Photo, the video file must contain a Content Identifier metadata tag set to a UUID. The associated photo must contain a Content Identifier metadata tag set to the same UUID. Unfortunately, these tags cannot be written with the standard [exiftool](https://exiftool.org/) utility if they do not already exist in the file as the metadata is stored in Maker Notes which exiftool cannot create.
+In order for Photos to treat a photo + video pair as a Live Photo, the video file must contain a Content Identifier metadata tag set to a [UUID](https://en.wikipedia.org/wiki/Universally_unique_identifier). The associated photo must contain a Content Identifier metadata tag set to the same UUID. Unfortunately, these tags cannot be written with the standard [exiftool](https://exiftool.org/) utility if they do not already exist in the file as the metadata is stored in Maker Notes which exiftool cannot create.
 
-This tool uses the Core Graphics and AV Foundation frameworks to modify the metadata of the photo and video files.
+This tool uses the Core Graphics and AV Foundation frameworks to modify the metadata of the photo and video files to add the required Content Identifier.
 
 ## Caution
 
