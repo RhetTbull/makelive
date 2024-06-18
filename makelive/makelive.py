@@ -438,3 +438,49 @@ def is_live_photo_pair(
         if video_id := live_id(video_path):
             return image_id if image_id == video_id else False
     return False
+
+def save_live_photo_pair_as_pvt(
+    image_path: str | os.PathLike,
+    video_path: str | os.PathLike,
+) -> str:
+    """
+    Save a Live Photo pair as a .pvt package
+
+    Args:
+        image_path: Path to the image file.
+        video_path: Path to the QuickTime movie file.
+
+    Returns:
+        Path to the .pvt package.
+
+    Raises:
+        ValueError: If the image and video pair are not a Live Photo pair.
+    """
+
+    # First check if the image and video pair are a Live Photo pair
+    if not is_live_photo_pair(image_path, video_path):
+        raise ValueError("Image and video pair are not a Live Photo pair and therefore cannot be saved as a package.")
+    
+    xml_metadata = (
+        '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" '
+        '"http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict>'
+        '<key>PFVideoComplementMetadataVersionKey</key><string>1</string></dict></plist>'
+    )
+
+    pvt_path = pathlib.Path(image_path).with_suffix(".pvt")
+
+    # Create .pvt container
+    os.makedirs(pvt_path, exist_ok=True)
+
+    # Copy image and video files to .pvt container
+    image_path = pathlib.Path(image_path)
+    video_path = pathlib.Path(video_path)
+
+    shutil.copy(image_path, pvt_path / image_path.name)
+    shutil.copy(video_path, pvt_path / video_path.name)
+
+    # Create metadata file
+    with open(pvt_path / "metadata.plist", "w") as metadata_file:
+        metadata_file.write(xml_metadata)
+
+    return pvt_path

@@ -8,7 +8,7 @@ from collections.abc import Iterable
 
 import click
 
-from .makelive import is_image_file, is_live_photo_pair, is_video_file, make_live_photo
+from .makelive import is_image_file, is_live_photo_pair, is_video_file, make_live_photo, save_live_photo_pair_as_pvt
 from .version import __version__
 
 
@@ -63,6 +63,12 @@ def check_pair(image: pathlib.Path, video: pathlib.Path):
     help="Print verbose output",
 )
 @click.option(
+    "-p",
+    "--pvt",
+    is_flag=True,
+    help="Save the Live Photo Pair as a .pvt package",
+)
+@click.option(
     "--manual",
     "-m",
     metavar="IMAGE VIDEO",
@@ -79,6 +85,7 @@ def check_pair(image: pathlib.Path, video: pathlib.Path):
 def main(
     check: bool,
     verbose: bool,
+    pvt: bool,
     manual: tuple[tuple[pathlib.Path, pathlib.Path]],
     files: tuple[pathlib.Path, ...],
 ):
@@ -127,7 +134,11 @@ def main(
             check_pair(image, video)
         else:
             asset_id = make_live_photo(image, video)
+            if pvt:
+                save_live_photo_pair_as_pvt(image, video)
             if verbose:
+                if pvt:
+                    click.echo(f"Saved {image} and {video} as a {image.with_suffix(".pvt")} package")
                 click.echo(f"Wrote asset ID: {asset_id} to {image} and {video}")
     for file in unmatched_files:
         click.echo(f"No matching file pair found for {file}", err=True)
