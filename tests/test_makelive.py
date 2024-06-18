@@ -258,6 +258,25 @@ def test_cli_manual(tmp_path):
     assert "Wrote asset ID" in results.output
 
 
+def test_cli_manual_pvt(tmp_path):
+    """Test the CLI with --manual --pvt"""
+
+    test_image, test_video, _ = copy_test_images(tmp_path)
+
+    runner = CliRunner()
+    results = runner.invoke(
+        main, ["--verbose", "--pvt", "--manual", test_image, test_video]
+    )
+    assert results.exit_code == 0
+    assert "Wrote asset ID" in results.output
+    assert ".pvt" in results.output
+
+    pvt_dir = tmp_path / pathlib.Path(pathlib.Path(test_image).stem + ".pvt")
+    assert pvt_dir.is_dir()
+    pvt_file = pvt_dir / pathlib.Path(test_image).name
+    assert pvt_file.is_file()
+
+
 def test_cli_files(tmp_path):
     """Test the CLI with FILES argument"""
 
@@ -268,6 +287,24 @@ def test_cli_files(tmp_path):
     results = runner.invoke(main, ["--verbose", *files])
     assert results.exit_code == 0
     assert "Wrote asset ID" in results.output
+
+
+def test_cli_files_pvt(tmp_path):
+    """Test the CLI with FILES argument and --pvt"""
+
+    copy_test_images_heic(tmp_path)
+
+    files = [str(f) for f in tmp_path.glob("*")]
+    runner = CliRunner()
+    results = runner.invoke(main, ["--verbose", "--pvt", *files])
+    assert results.exit_code == 0
+    assert "Wrote asset ID" in results.output
+    assert ".pvt" in results.output
+
+    pvt_dir = tmp_path / pathlib.Path(pathlib.Path(files[0]).stem + ".pvt")
+    assert pvt_dir.is_dir()
+    pvt_file = pvt_dir / pathlib.Path(files[0]).name
+    assert pvt_file.is_file()
 
 
 def test_cli_bad_files(tmp_path):
