@@ -14,7 +14,12 @@ from typing import Any
 import pytest
 from click.testing import CliRunner
 
-from makelive import is_live_photo_pair, live_id, make_live_photo
+from makelive import (
+    is_live_photo_pair,
+    live_id,
+    make_live_photo,
+    save_live_photo_pair_as_pvt,
+)
 from makelive.__main__ import main
 
 TEST_IMAGE: pathlib.Path = pathlib.Path("tests/test.jpeg")
@@ -185,6 +190,63 @@ def test_live_id(tmp_path):
     assert live_id(test_image) == asset_id
 
 
+@pytest.mark.skipif(get_exiftool_path() is None, reason="exiftool not found")
+def test_save_live_photo_pair_as_pvt(tmp_path):
+    """Test the save_live_photo_pair_as_pvt() function"""
+
+    test_image, test_video, _ = copy_test_images(tmp_path)
+    asset_id, pvt_file = save_live_photo_pair_as_pvt(test_image, test_video)
+    metadata_after = get_metadata_with_exiftool(
+        pvt_file / pathlib.Path(test_image).name
+    )
+    assert asset_id == metadata_after["MakerNotes:ContentIdentifier"]
+    metadata_after = get_metadata_with_exiftool(
+        pvt_file / pathlib.Path(test_video).name
+    )
+    assert asset_id == metadata_after["QuickTime:ContentIdentifier"]
+
+    # verify originals were not modified
+    assert not is_live_photo_pair(test_image, test_video)
+
+
+@pytest.mark.skipif(get_exiftool_path() is None, reason="exiftool not found")
+def test_save_live_photo_pair_as_pvt_asset_id(tmp_path):
+    """Test the save_live_photo_pair_as_pvt() function with user supplied asset_id"""
+
+    test_image, test_video, _ = copy_test_images(tmp_path)
+    user_asset_id = str(uuid.uuid4()).upper()
+    asset_id, pvt_file = save_live_photo_pair_as_pvt(
+        test_image, test_video, asset_id=user_asset_id
+    )
+    metadata_after = get_metadata_with_exiftool(
+        pvt_file / pathlib.Path(test_image).name
+    )
+    assert asset_id == user_asset_id
+    assert user_asset_id == metadata_after["MakerNotes:ContentIdentifier"]
+    metadata_after = get_metadata_with_exiftool(
+        pvt_file / pathlib.Path(test_video).name
+    )
+    assert user_asset_id == metadata_after["QuickTime:ContentIdentifier"]
+
+
+@pytest.mark.skipif(get_exiftool_path() is None, reason="exiftool not found")
+def test_save_live_photo_pair_as_pvt_pvt_path(tmp_path):
+    """Test the save_live_photo_pair_as_pvt() function with user supplied pvt_path"""
+
+    test_image, test_video, _ = copy_test_images(tmp_path)
+    asset_id, pvt_file = save_live_photo_pair_as_pvt(
+        test_image, test_video, pvt_path=tmp_path
+    )
+    metadata_after = get_metadata_with_exiftool(
+        pvt_file / pathlib.Path(test_image).name
+    )
+    assert asset_id == metadata_after["MakerNotes:ContentIdentifier"]
+    metadata_after = get_metadata_with_exiftool(
+        pvt_file / pathlib.Path(test_video).name
+    )
+    assert asset_id == metadata_after["QuickTime:ContentIdentifier"]
+
+
 def test_cli_manual(tmp_path):
     """Test the CLI with --manual"""
 
@@ -194,6 +256,25 @@ def test_cli_manual(tmp_path):
     results = runner.invoke(main, ["--verbose", "--manual", test_image, test_video])
     assert results.exit_code == 0
     assert "Wrote asset ID" in results.output
+
+
+def test_cli_manual_pvt(tmp_path):
+    """Test the CLI with --manual --pvt"""
+
+    test_image, test_video, _ = copy_test_images(tmp_path)
+
+    runner = CliRunner()
+    results = runner.invoke(
+        main, ["--verbose", "--pvt", "--manual", test_image, test_video]
+    )
+    assert results.exit_code == 0
+    assert "Wrote asset ID" in results.output
+    assert ".pvt" in results.output
+
+    pvt_dir = tmp_path / pathlib.Path(pathlib.Path(test_image).stem + ".pvt")
+    assert pvt_dir.is_dir()
+    pvt_file = pvt_dir / pathlib.Path(test_image).name
+    assert pvt_file.is_file()
 
 
 def test_cli_files(tmp_path):
@@ -206,6 +287,24 @@ def test_cli_files(tmp_path):
     results = runner.invoke(main, ["--verbose", *files])
     assert results.exit_code == 0
     assert "Wrote asset ID" in results.output
+
+
+def test_cli_files_pvt(tmp_path):
+    """Test the CLI with FILES argument and --pvt"""
+
+    copy_test_images_heic(tmp_path)
+
+    files = [str(f) for f in tmp_path.glob("*")]
+    runner = CliRunner()
+    results = runner.invoke(main, ["--verbose", "--pvt", *files])
+    assert results.exit_code == 0
+    assert "Wrote asset ID" in results.output
+    assert ".pvt" in results.output
+
+    pvt_dir = tmp_path / pathlib.Path(pathlib.Path(files[0]).stem + ".pvt")
+    assert pvt_dir.is_dir()
+    pvt_file = pvt_dir / pathlib.Path(files[0]).name
+    assert pvt_file.is_file()
 
 
 def test_cli_bad_files(tmp_path):
