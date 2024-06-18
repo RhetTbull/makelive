@@ -1,0 +1,26 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "am1006",
+      "name": "Luitbald",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13403435?v=4",
+      "profile": "http://am1006.me",
+      "contributions": [
+        "code"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "skipCi": true,
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "projectName": "makelive",
+  "projectOwner": "RhetTbull"
+}
