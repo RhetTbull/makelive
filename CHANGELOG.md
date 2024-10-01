@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.2](https://github.com/RhetTbull/makelive/compare/v0.6.1...v0.6.2)
+
+Updated dependencies to remove unneeded dependencies.
+
+### 2024-10-01
+
+#### Added
+
+#### Changed
+
+#### Removed
+
+#### Fixed
+
+#### Contributors
+
 ## [v0.6.1](https://github.com/RhetTbull/makelive/compare/v0.6.0...v0.6.1)
 
 Fixed example in README.md.
