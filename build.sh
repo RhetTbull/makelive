@@ -27,4 +27,4 @@ echo "Building version $VERSION for Apple Silicon"
 bash scripts/pyapp-runner.sh m1 $PROJECT $VERSION
 
 echo "Building version $VERSION for Intel"
-bash scripts/pyapp-runner.sh macbook $PROJECT $VERSION
+bash scripts/pyapp-runner.sh intel $PROJECT $VERSION
