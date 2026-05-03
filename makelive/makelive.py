@@ -149,9 +149,7 @@ def avmetadata_for_asset_id(asset_id: str) -> AVFoundation.AVMetadataItem:
     return item
 
 
-def _add_asset_id_via_export_session(
-    filepath: pathlib.Path, asset_id: str
-) -> str | None:
+def _add_asset_id_via_export_session(filepath: pathlib.Path, asset_id: str) -> str | None:
     """Stamp the content identifier via AVAssetExportSession (passthrough).
 
     This re-exports the file and does not preserve track reference atoms (tref).
@@ -232,20 +230,16 @@ def add_asset_id_to_quicktime_file(filepath: str | os.PathLike, asset_id: str) -
 
         # Replace any existing content identifier, preserving all other movie-level metadata
         existing = [
-            item for item in (movie.metadata() or [])
-            if not (
-                str(item.key()) == kKeyContentIdentifier
-                and str(item.keySpace()) == kKeySpaceQuickTimeMetadata
-            )
+            item
+            for item in (movie.metadata() or [])
+            if not (str(item.key()) == kKeyContentIdentifier and str(item.keySpace()) == kKeySpaceQuickTimeMetadata)
         ]
         movie.setMetadata_(existing + [avmetadata_for_asset_id(asset_id)])
 
         # Write only the movie header back to the same URL.
         # This updates the atom structure in place without re-encoding or re-interleaving
         # any track data, so all tref associations between mebx and video tracks are preserved.
-        success, error = movie.writeMovieHeaderToURL_fileType_options_error_(
-            url, AVFoundation.AVFileTypeQuickTimeMovie, 0, None
-        )
+        success, error = movie.writeMovieHeaderToURL_fileType_options_error_(url, AVFoundation.AVFileTypeQuickTimeMovie, 0, None)
         if not success:
             return f"writeMovieHeaderToURL failed for {filepath}: {error.description() if error else 'unknown error'}"
         return None
