@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import pathlib
 import shutil
-import threading
 import uuid
 
 import AVFoundation
@@ -14,12 +13,14 @@ import objc
 import Quartz
 from Foundation import (
     NSURL,
-    CFDictionaryRef,
     NSData,
     NSMutableData,
     NSMutableDictionary,
 )
 from wurlitzer import pipes
+
+from .heic_metadata import set_heic_content_identifier
+from .mp4_metadata import set_mp4_content_identifier
 
 # Constants
 # key for the MakerApple dictionary in the image metadata to store the asset ID
@@ -30,104 +31,97 @@ kFigAppleMakerNote_AssetIdentifier = "17"
 kKeyContentIdentifier = "com.apple.quicktime.content.identifier"
 kKeySpaceQuickTimeMetadata = "mdta"
 
+# Auxiliary data attached to the main image that should be preserved when
+# rewriting the file (CGImageDestinationAddImageFromSource drops these by
+# default). HDR gain maps and depth maps are the most user-visible.
+_AUXILIARY_DATA_TYPES = (
+    Quartz.kCGImageAuxiliaryDataTypeHDRGainMap,
+    Quartz.kCGImageAuxiliaryDataTypeISOGainMap,
+    Quartz.kCGImageAuxiliaryDataTypeDepth,
+    Quartz.kCGImageAuxiliaryDataTypeDisparity,
+    Quartz.kCGImageAuxiliaryDataTypePortraitEffectsMatte,
+    Quartz.kCGImageAuxiliaryDataTypeSemanticSegmentationSkinMatte,
+    Quartz.kCGImageAuxiliaryDataTypeSemanticSegmentationHairMatte,
+    Quartz.kCGImageAuxiliaryDataTypeSemanticSegmentationTeethMatte,
+    Quartz.kCGImageAuxiliaryDataTypeSemanticSegmentationGlassesMatte,
+    Quartz.kCGImageAuxiliaryDataTypeSemanticSegmentationSkyMatte,
+)
+
 ### Functions for adding asset id to image file ###
-
-
-def image_source_from_path(
-    image_path: str | os.PathLike,
-) -> Quartz.CGImageSourceRef:
-    """Create a CGImageSourceRef from an image file.
-
-    Args:
-        image_path: Path to the image file.
-
-    Returns: CGImageSourceRef with the image data.
-
-    Raises:
-        ValueError: If the image source could not be created.
-    """
-    with objc.autorelease_pool():
-        image_url = NSURL.fileURLWithPath_(str(image_path))
-        image_source = Quartz.CGImageSourceCreateWithURL(image_url, None)
-        if not image_source:
-            raise ValueError(f"Could not create image source for {image_path}")
-        return image_source
-
-
-def write_image_with_metadata(
-    image_data: Quartz.CGImageSourceRef,
-    metadata: CFDictionaryRef,
-    destination_path: str | os.PathLike,
-) -> None:
-    """Write image with metadata to destination path
-
-    Args:
-        image_data: CGImageSourceRef with the image data.
-        metadata: CFDictionaryRef with the metadata to write.
-        destination_path: Path to write the image to.
-
-    Note:
-        If destination_path already exists, it will be overwritten.
-
-    Raises:
-        ValueError: If the image destination could not be created.
-    """
-    destination_path = str(destination_path)
-    with objc.autorelease_pool():
-        image_type = Quartz.CGImageSourceGetType(image_data)
-        dest_data = NSMutableData.data()
-        destination = Quartz.CGImageDestinationCreateWithData(dest_data, image_type, 1, None)
-        if not destination:
-            raise ValueError(f"Could not create image destination for {destination_path}")
-        with pipes() as (_out, _err):
-            # use pipes to catch error messages from CGImageDestinationAddImageFromSource
-            # there's a bug in Core Graphics that causes an error similar to
-            # AVEBridge Info: AVEEncoder_CreateInstance: Received CreateInstance (from VT)
-            # ... AVEBridge Error: AVEEncoder_CreateInstance: returning err = -12908
-            # to output to stderr/console but the image is still written correctly
-            # reference: https://github.com/biodranik/HEIF/issues/5 and
-            # https://forums.developer.apple.com/forums/thread/722204
-            Quartz.CGImageDestinationAddImageFromSource(destination, image_data, 0, metadata)
-            Quartz.CGImageDestinationFinalize(destination)
-            new_image_data = NSData.dataWithData_(dest_data)
-            new_image_data.writeToFile_atomically_(destination_path, True)
-
-
-def metadata_dict_for_asset_id(image_data: Quartz.CGImageSourceRef, asset_id: str) -> CFDictionaryRef:
-    """Create a CFDictionaryRef with the asset id in the MakerApple dictionary and merge with existing metadata
-
-    Args:
-        image_data: CGImageSourceRef with the image data.
-        asset_id: The asset id to write to the file.
-
-    Returns: CFDictionaryRef with the new metadata dictionary.
-    """
-    with objc.autorelease_pool():
-        metadata = Quartz.CGImageSourceCopyPropertiesAtIndex(image_data, 0, None)
-        metadata_as_mutable = metadata.mutableCopy()
-        maker_apple = metadata_as_mutable.objectForKey_(Quartz.kCGImagePropertyMakerAppleDictionary)
-        if not maker_apple:
-            maker_apple = NSMutableDictionary.alloc().init()
-        maker_apple.setObject_forKey_(asset_id, kFigAppleMakerNote_AssetIdentifier)
-        metadata_as_mutable.setObject_forKey_(maker_apple, Quartz.kCGImagePropertyMakerAppleDictionary)
-        return metadata_as_mutable
 
 
 def add_asset_id_to_image_file(
     image_path: str | os.PathLike,
     asset_id: str,
 ) -> None:
-    """Write the asset id to file at image_path and save to destination path
+    """Write the MakerApple ContentIdentifier to the image file in place.
 
-    Args:
-        image_path: Path to the image file.
-        asset_id: The asset id to write to the file.
+    Per-format pipeline:
+      • HEIC / HEIF: byte-level ISOBMFF surgery (see `heic_metadata`). The
+        HEVC bitstream is byte-preserved; only the EXIF item is rewritten
+        and the `iloc` updated. Gain map / depth / all auxiliary items
+        survive trivially because they are never touched.
+      • JPEG / other: CGImageDestinationAddImageFromSource — the only CG
+        path that can write MakerNote. For JPEG→JPEG this is a passthrough
+        copy at default settings; `PreserveGainMap` + an explicit
+        auxiliary-data copy loop keep HDR / depth around.
     """
+    image_path = pathlib.Path(image_path)
+    if image_path.suffix.lower() in (".heic", ".heif"):
+        set_heic_content_identifier(image_path, asset_id)
+        return
+
     image_path = str(image_path)
     with objc.autorelease_pool():
-        image_data = image_source_from_path(image_path)
-        metadata = metadata_dict_for_asset_id(image_data, asset_id)
-        write_image_with_metadata(image_data, metadata, image_path)
+        url = NSURL.fileURLWithPath_(image_path)
+        source = Quartz.CGImageSourceCreateWithURL(url, None)
+        if not source:
+            raise ValueError(f"Could not create image source for {image_path}")
+
+        properties = Quartz.CGImageSourceCopyPropertiesAtIndex(source, 0, None)
+        mutable_props = (
+            properties.mutableCopy()
+            if properties is not None
+            else NSMutableDictionary.alloc().init()
+        )
+
+        maker_apple = mutable_props.objectForKey_(Quartz.kCGImagePropertyMakerAppleDictionary)
+        maker_apple = maker_apple.mutableCopy() if maker_apple else NSMutableDictionary.alloc().init()
+        maker_apple.setObject_forKey_(asset_id, kFigAppleMakerNote_AssetIdentifier)
+        mutable_props.setObject_forKey_(
+            maker_apple, Quartz.kCGImagePropertyMakerAppleDictionary
+        )
+
+        # HEIC/HEIF go through the byte-perfect path above; this branch is
+        # JPEG (and any other CG-supported format), where the default-quality
+        # AddImageFromSource produces a passthrough copy.
+        mutable_props.setObject_forKey_(False, Quartz.kCGImageDestinationOptimizeColorForSharing)
+        mutable_props.setObject_forKey_(True, Quartz.kCGImageDestinationPreserveGainMap)
+
+        image_type = Quartz.CGImageSourceGetType(source)
+        dest_data = NSMutableData.data()
+        destination = Quartz.CGImageDestinationCreateWithData(dest_data, image_type, 1, None)
+        if not destination:
+            raise ValueError(f"Could not create image destination for {image_path}")
+
+        with pipes() as (_out, _err):
+            # CG may emit harmless AVEBridge messages to stderr for some HEIC files.
+            # https://forums.developer.apple.com/forums/thread/722204
+            Quartz.CGImageDestinationAddImageFromSource(
+                destination, source, 0, mutable_props
+            )
+            # PreserveGainMap covers the HDR gain map; depth/portrait/segmentation
+            # mattes still need to be re-attached explicitly or they get dropped.
+            for aux_type in _AUXILIARY_DATA_TYPES:
+                if aux_type is None:
+                    continue
+                info = Quartz.CGImageSourceCopyAuxiliaryDataInfoAtIndex(source, 0, aux_type)
+                if info is not None:
+                    Quartz.CGImageDestinationAddAuxiliaryDataInfo(destination, aux_type, info)
+            if not Quartz.CGImageDestinationFinalize(destination):
+                raise ValueError(f"Could not finalize image destination for {image_path}")
+
+        NSData.dataWithData_(dest_data).writeToFile_atomically_(image_path, True)
 
 
 ### Functions for adding asset id to QuickTime video file ###
@@ -149,55 +143,8 @@ def avmetadata_for_asset_id(asset_id: str) -> AVFoundation.AVMetadataItem:
     return item
 
 
-def _add_asset_id_via_export_session(filepath: pathlib.Path, asset_id: str) -> str | None:
-    """Stamp the content identifier via AVAssetExportSession (passthrough).
-
-    This re-exports the file and does not preserve track reference atoms (tref).
-    Used for non-QuickTime containers (e.g. .mp4) where AVMutableMovie's
-    writeMovieHeaderToURL is not supported.
-    """
-    with objc.autorelease_pool():
-        # rename file so export can write to original path
-        temp_filepath = filepath.parent / f".{asset_id}_{filepath.name}"
-        os.rename(filepath, temp_filepath)
-        input_url = NSURL.fileURLWithPath_(str(temp_filepath))
-        output_url = NSURL.fileURLWithPath_(str(filepath))
-        asset = AVFoundation.AVAsset.assetWithURL_(input_url)
-        metadata_item = avmetadata_for_asset_id(asset_id)
-        export_session = AVFoundation.AVAssetExportSession.alloc().initWithAsset_presetName_(
-            asset, AVFoundation.AVAssetExportPresetPassthrough
-        )
-
-        export_session.setOutputFileType_(AVFoundation.AVFileTypeQuickTimeMovie)
-        export_session.setOutputURL_(output_url)
-        export_session.setMetadata_([metadata_item])
-
-        event = threading.Event()
-        error = None
-
-        def _completion_handler():
-            nonlocal error
-            if error_val := export_session.error():
-                error = error_val.description()
-            event.set()
-
-        export_session.exportAsynchronouslyWithCompletionHandler_(_completion_handler)
-        event.wait()
-
-        if error:
-            try:
-                os.unlink(filepath)
-            except FileNotFoundError:
-                pass
-            os.rename(temp_filepath, filepath)
-        else:
-            os.unlink(temp_filepath)
-
-        return error or None
-
-
 def add_asset_id_to_quicktime_file(filepath: str | os.PathLike, asset_id: str) -> str | None:
-    """Write the asset id to a QuickTime movie file at filepath and save to destination path
+    """Write the asset id to a QuickTime movie file at filepath and save to destination path.
 
     Args:
         filepath: Path to the QuickTime movie file.
@@ -205,22 +152,25 @@ def add_asset_id_to_quicktime_file(filepath: str | os.PathLike, asset_id: str) -
 
     Returns: Error message if there was an error, otherwise None.
 
-    For QuickTime (.mov) files, this updates only the movie-level metadata (content
-    identifier) and writes back the movie header in place. All track data, track
-    reference atoms (tref), and mebx metadata tracks are preserved exactly as they
-    were in the original file. iOS requires the cdsc/cdep tref associations between
-    mebx timed-metadata tracks and the video track to enable lock screen Live
-    Wallpaper animation (the "animate" button); writing only the movie header keeps
-    them intact.
+    For `.mov` files, uses AVMutableMovie.writeMovieHeaderToURL to rewrite only
+    the movie header in place. All track data, track reference atoms (tref),
+    and mebx metadata tracks are preserved exactly as they were in the
+    original file. iOS requires the cdsc/cdep tref associations between mebx
+    timed-metadata tracks and the video track to enable lock screen Live
+    Wallpaper animation (the "animate" button).
 
-    For .mp4 files, AVMutableMovie's writeMovieHeaderToURL is not supported by the
-    underlying media format, so this falls back to AVAssetExportSession with
-    AVAssetExportPresetPassthrough. .mp4 is not used by Live Wallpapers, so the
-    tref-preservation behaviour is not relevant for that path.
+    For `.mp4` files, uses byte-level ISOBMFF surgery in `mp4_metadata`. The
+    HEVC bitstream inside `mdat` is byte-identical to the source; only `moov`
+    is rewritten (in place when possible, or as a free-box + appended new
+    moov otherwise). No re-encoding, no track-data remux.
     """
     filepath = pathlib.Path(filepath)
     if filepath.suffix.lower() != ".mov":
-        return _add_asset_id_via_export_session(filepath, asset_id)
+        try:
+            set_mp4_content_identifier(filepath, asset_id)
+            return None
+        except Exception as e:
+            return str(e)
 
     with objc.autorelease_pool():
         url = NSURL.fileURLWithPath_(str(filepath))
