@@ -110,12 +110,12 @@ This tool uses the Core Graphics and AV Foundation frameworks to modify the meta
 
 ## Limitations
 
-The Live Photos created by this tool may not work as Live Wallpapers. I don't user Live Wallpapers and don't have time to debug this. I believe the issue has to do with video format and/or video length. I'm happy to accept a PR but please don't open an issue if Live Wallpapers don't work.
+Ordinary identifier-only Live Photos may not qualify for wallpaper motion. Use the explicit `--wallpaper` mode described below for the tested experimental encoding pipeline. Eligibility still requires a device check.
 
 ## Caution
 
 > [!WARNING]
-> This tool has not yet been extensively tested. It is recommended that you make a backup of your photo and video files before using this tool as it will overwrite the files which is required to add the necessary metadata. This also means that the files will be re-encoded and as a result, the file size may change, as may the quality of the image and video. I've used the native Apple APIs to do the encoding at maxixum quality but you should verify that the results are suitable for your needs.
+> Normal metadata mode rewrites the supplied files in place; make backups before using it. Metadata rewriting may alter image encoding, metadata layout, or file size. Wallpaper mode writes a separate output pair and re-encodes it at the selected preset. Verify the resulting quality and device behavior.
 
 ## Source Code
 
@@ -153,3 +153,69 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
+
+## Live Wallpaper mode
+
+Use `--wallpaper` / `-w` to create one pair through the experimental pipeline
+validated in our phone tests:
+
+```sh
+python3 -m makelive -w input.mov
+```
+
+The normal command without `-w` continues its existing photo/video metadata
+processing. Wallpaper mode preserves inputs and writes `input.heic` and `input.mov`
+into a new `input_wallpaper` directory. Existing output directories are rejected.
+No experiment folders, external reference movie, ffmpeg, or ExifTool are required
+at runtime; the package includes a metadata-only reference and frame schedule.
+
+Default output is **1080×1920 (9:16), high quality, up to 2.686667 seconds**.
+Video is center-cropped to fit, resampled to the tested reference cadence and
+encoded as HEVC with every frame independently decodable. The still is extracted
+exactly at the encoded key-photo marker. Originals are not changed. This is lossy
+re-encoding, not source-quality or lossless passthrough.
+
+```sh
+# Short, 3:4, lower-quality pair
+python3 -m makelive -w --duration 0.97 --resolution 1080x1440 --quality lower input.mov
+
+# Use an existing image as the output still's color-space reference
+python3 -m makelive -w --manual supplied.heic input.mov --output-dir my_wallpaper
+
+# Explicit key frame in the source video; trim window centers on it where possible
+python3 -m makelive -w --still-image-time 1.5 --duration 1 input.mov
+```
+
+| Setting | High | Lower |
+| --- | --- | --- |
+| 1080×1920 target video bitrate | 30 Mbps | 4 Mbps |
+| 1080×1440 target video bitrate | 22.5 Mbps | 3 Mbps |
+| HEIC compression quality | 0.95 | 0.60 |
+
+Bitrates are encoder targets, not hard caps. A supplied image supplies color-space
+information; the output poster is generated from the movie rather than copying
+that image's pixels. Video-only input uses sRGB for the poster. Source duration
+limits the clip length; wallpaper clips must be at least 0.1 seconds. The tested
+0.97-second preset uses a scaled reference schedule, sampling the first source
+interval at normal speed. The default marker follows the tested template position;
+`--still-image-time` is a source timestamp. `--output-dir` supports one pair per run.
+Multiple videos with distinct stems can be processed without that option.
+`--pvt` is unsupported with `-w`; `--check` remains a read-only identifier-pair check,
+not a wallpaper eligibility validator.
+
+An optional `--reference-video compatible.mov` overrides the bundled reference.
+The pipeline borrows opaque `live-photo-info` records and vitality values; it does
+not compute capture motion metadata for arbitrary footage. All eight quality/
+duration/resolution variants worked for the tested source, but universal iPhone
+wallpaper eligibility is not established. Import the output image and movie into
+Photos together, then transfer the Live Photo using your usual workflow.
+
+Python API:
+
+```python
+from makelive import make_live_wallpaper
+
+asset_id, image, movie = make_live_wallpaper(
+    "input.mov", duration=0.97, resolution="1080x1920", quality="high"
+)
+```
